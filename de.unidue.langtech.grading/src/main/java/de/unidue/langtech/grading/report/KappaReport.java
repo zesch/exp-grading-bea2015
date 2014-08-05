@@ -70,6 +70,6 @@ public class KappaReport
         }
         
         // Write out properties
-        getContext().storeBinary(KAPPA_FILE_NAME, new PropertiesAdapter(props));
+        getContext().storeBinary(TestTask.RESULTS_FILENAME, new PropertiesAdapter(props));
     }
 }

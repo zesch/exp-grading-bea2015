@@ -13,7 +13,6 @@ import org.apache.uima.fit.component.NoOpAnnotator;
 import org.apache.uima.resource.ResourceInitializationException;
 
 import weka.classifiers.bayes.NaiveBayes;
-import weka.classifiers.functions.SMO;
 import de.tudarmstadt.ukp.dkpro.core.jazzy.SpellChecker;
 import de.tudarmstadt.ukp.dkpro.core.stanfordnlp.StanfordParser;
 import de.tudarmstadt.ukp.dkpro.core.tokit.BreakIteratorSegmenter;
@@ -53,16 +52,16 @@ public class ASAP2Experiment
     
     public static final String SPELLING_VOCABULARY = "classpath:/vocabulary/en_US_dict.txt";
 
-    public static final int NUM_FOLDS = 10;
+    public static final int NUM_FOLDS = 5;
 
     public static final String TRAIN_DATA_ALL        = "classpath:/asap/train.tsv";
     public static final String TRAIN_DATA_CONSISTENT = "classpath:/asap/train_consistent_items.tsv";
-    public static final String TEST_DATA             = "classpath:/asap/test_public_leaderboard.tsv";
+    public static final String TEST_DATA             = "classpath:/asap/test_public.txt";
 
 	public static final Integer[] essaySetIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
   
-    public static final boolean useTagger = true;
-    public static final boolean useChunker = true;
+    public static final boolean useTagger = false;
+    public static final boolean useChunker = false;
     public static final boolean useParsing = false;
     public static final boolean useSpellChecking = false;
 
@@ -74,7 +73,7 @@ public class ASAP2Experiment
 //	        ParameterSpace pSpace = getParameterSpace(essaySetId, TRAIN_DATA_CONSISTENT, TEST_DATA);
 
 	        ASAP2Experiment experiment = new ASAP2Experiment();
-//	        experiment.runCrossValidation(pSpace);
+	        experiment.runCrossValidation(pSpace);
 	        experiment.runTrainTest(pSpace);
         }
 
@@ -89,10 +88,10 @@ public class ASAP2Experiment
         Map<String, Object> dimReaders = new HashMap<String, Object>();
         dimReaders.put(DIM_READER_TRAIN, Asap2Reader.class);
         dimReaders.put(
-                        DIM_READER_TRAIN_PARAMS,
-                        Arrays.asList(
-                                Asap2Reader.PARAM_INPUT_FILE, trainFile,
-                                Asap2Reader.PARAM_ESSAY_SET_ID, essaySetId));
+                DIM_READER_TRAIN_PARAMS,
+                Arrays.asList(
+                        Asap2Reader.PARAM_INPUT_FILE, trainFile,
+                        Asap2Reader.PARAM_ESSAY_SET_ID, essaySetId));
         dimReaders.put(DIM_READER_TEST, Asap2Reader.class);
         dimReaders.put(
                 DIM_READER_TEST_PARAMS,
@@ -101,17 +100,17 @@ public class ASAP2Experiment
                         Asap2Reader.PARAM_ESSAY_SET_ID, essaySetId));
 
         Dimension<List<String>> dimClassificationArgs = Dimension.create(DIM_CLASSIFICATION_ARGS,
-                Arrays.asList(new String[] { SMO.class.getName() }),
+//                Arrays.asList(new String[] { SMO.class.getName() }),
                 Arrays.asList(new String[] { NaiveBayes.class.getName() }));
 
         Dimension<List<Object>> dimPipelineParameters = Dimension.create(
                 DIM_PIPELINE_PARAMS,
-                Arrays.asList(new Object[] {
-                		LuceneNGramDFE.PARAM_NGRAM_USE_TOP_K, 500,
-                        LuceneNGramDFE.PARAM_NGRAM_MIN_N, 1,
-                        LuceneNGramDFE.PARAM_NGRAM_MAX_N, 3,
-                        LuceneNGramDFE.PARAM_NGRAM_STOPWORDS_FILE, stopwordList
-                }),
+//                Arrays.asList(new Object[] {
+//                		LuceneNGramDFE.PARAM_NGRAM_USE_TOP_K, 500,
+//                        LuceneNGramDFE.PARAM_NGRAM_MIN_N, 1,
+//                        LuceneNGramDFE.PARAM_NGRAM_MAX_N, 3,
+//                        LuceneNGramDFE.PARAM_NGRAM_STOPWORDS_FILE, stopwordList
+//                }),
                 Arrays.asList(new Object[] {
                 		LuceneNGramDFE.PARAM_NGRAM_USE_TOP_K, 1000,
                         LuceneNGramDFE.PARAM_NGRAM_MIN_N, 1,
@@ -122,20 +121,13 @@ public class ASAP2Experiment
 
         Dimension<List<String>> dimFeatureSets = Dimension.create(
                 DIM_FEATURE_SET,
-                // length baseline
-                Arrays.asList(new String[] {
-                    NrOfCharsDFE.class.getName(),
-                    NrOfSentencesDFE.class.getName(),
-                    NrOfTokensDFE.class.getName()       
-                }),
+//                // length baseline
+//                Arrays.asList(new String[] {
+//                    NrOfCharsDFE.class.getName(),
+//                    NrOfSentencesDFE.class.getName(),
+//                    NrOfTokensDFE.class.getName()       
+//                }),
                 // + ngrams
-                Arrays.asList(new String[] {
-                    NrOfCharsDFE.class.getName(),
-                    NrOfSentencesDFE.class.getName(),
-                    NrOfTokensDFE.class.getName(),
-                    LuceneNGramDFE.class.getName()         
-                }),
-                // + spelling
                 Arrays.asList(new String[] {
                     NrOfCharsDFE.class.getName(),
                     NrOfSentencesDFE.class.getName(),
