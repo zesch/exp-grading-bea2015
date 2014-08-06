@@ -17,10 +17,10 @@ import weka.attributeSelection.InfoGainAttributeEval;
 import weka.attributeSelection.Ranker;
 import weka.classifiers.functions.SMO;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpDependencyParser;
-import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpPosTagger;
 import de.tudarmstadt.ukp.dkpro.core.jazzy.SpellChecker;
 import de.tudarmstadt.ukp.dkpro.core.tokit.BreakIteratorSegmenter;
 import de.tudarmstadt.ukp.dkpro.core.treetagger.TreeTaggerChunkerTT4J;
+import de.tudarmstadt.ukp.dkpro.core.treetagger.TreeTaggerPosLemmaTT4J;
 import de.tudarmstadt.ukp.dkpro.lab.Lab;
 import de.tudarmstadt.ukp.dkpro.lab.task.Dimension;
 import de.tudarmstadt.ukp.dkpro.lab.task.ParameterSpace;
@@ -63,9 +63,9 @@ public class ASAP2Experiment
 
 	public static final Integer[] essaySetIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
   
-    public static final boolean useTagger = false;
+    public static final boolean useTagger = true;
     public static final boolean useChunker = false;
-    public static final boolean useParsing = false;
+    public static final boolean useParsing = true;
     public static final boolean useSpellChecking = false;
 
     public static void main(String[] args)
@@ -114,10 +114,10 @@ public class ASAP2Experiment
 //                        LuceneNGramDFE.PARAM_NGRAM_STOPWORDS_FILE, stopwordList
 //                }),
                 Arrays.asList(new Object[] {
-                		LuceneNGramDFE.PARAM_NGRAM_USE_TOP_K, 10000,
+                		LuceneNGramDFE.PARAM_NGRAM_USE_TOP_K, 5000,
                         LuceneNGramDFE.PARAM_NGRAM_STOPWORDS_FILE, stopwordList,
                         LuceneSkipNGramDFE.PARAM_NGRAM_USE_TOP_K, 5000,
-                        LuceneCharacterNGramDFE.PARAM_CHAR_NGRAM_MAX_N, 5
+                        LuceneCharacterNGramDFE.PARAM_CHAR_NGRAM_MAX_N, 3
                 })
         );
 
@@ -135,7 +135,7 @@ public class ASAP2Experiment
         // single-label feature selection (Weka specific options), reduces the feature set to k features
         Map<String, Object> dimFeatureSelection = new HashMap<String, Object>();
         dimFeatureSelection.put(DIM_FEATURE_SEARCHER_ARGS,
-                asList(new String[] { Ranker.class.getName(), "-N", "10000" }));
+                asList(new String[] { Ranker.class.getName(), "-N", "5000" }));
         dimFeatureSelection.put(DIM_ATTRIBUTE_EVALUATOR_ARGS,
                 asList(new String[] { InfoGainAttributeEval.class.getName() }));
         dimFeatureSelection.put(DIM_APPLY_FEATURE_SELECTION, true);
@@ -146,8 +146,8 @@ public class ASAP2Experiment
                 Dimension.create(DIM_FEATURE_MODE, FM_DOCUMENT),
                 dimPipelineParameters,
                 dimFeatureSets,
-                dimClassificationArgs,
-                Dimension.createBundle("featureSelection", dimFeatureSelection)
+                dimClassificationArgs
+//                Dimension.createBundle("featureSelection", dimFeatureSelection)
         );
 
         return pSpace;
@@ -203,14 +203,15 @@ public class ASAP2Experiment
         AnalysisEngineDescription parser       = createEngineDescription(NoOpAnnotator.class);
         
         if (useTagger) {
-//            tagger = createEngineDescription(
-//                    TreeTaggerPosLemmaTT4J.class,
-//                    TreeTaggerPosLemmaTT4J.PARAM_LANGUAGE, LANGUAGE_CODE
-//            );
+        	System.out.println("Running tagger ...");
             tagger = createEngineDescription(
-                    ClearNlpPosTagger.class,
-                    ClearNlpPosTagger.PARAM_LANGUAGE, LANGUAGE_CODE
+                    TreeTaggerPosLemmaTT4J.class,
+                    TreeTaggerPosLemmaTT4J.PARAM_LANGUAGE, LANGUAGE_CODE
             );
+//            tagger = createEngineDescription(
+//                    ClearNlpPosTagger.class,
+//                    ClearNlpPosTagger.PARAM_LANGUAGE, LANGUAGE_CODE
+//            );
         }
         
         if (useChunker) {
@@ -228,6 +229,7 @@ public class ASAP2Experiment
         }
         
         if (useParsing) {
+        	System.out.println("Running tagger ...");
 //            parser = createEngineDescription(
 //                    StanfordParser.class,
 //                    StanfordParser.PARAM_VARIANT, "pcfg"

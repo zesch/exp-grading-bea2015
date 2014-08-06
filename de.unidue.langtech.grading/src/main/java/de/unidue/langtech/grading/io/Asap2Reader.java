@@ -37,7 +37,7 @@ public class Asap2Reader
 	        }
 	        
 	        jcas.setDocumentText(asap2Item.getText());
-	
+	        	
             DocumentMetaData dmd = DocumentMetaData.create(jcas);
             dmd.setDocumentId(String.valueOf(asap2Item.getTextId())); // + "-" + asap2Item.getEssaySetId());
             dmd.setDocumentTitle(Integer.toString(asap2Item.getTextId()));
