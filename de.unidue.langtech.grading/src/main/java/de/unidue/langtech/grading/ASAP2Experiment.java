@@ -1,5 +1,6 @@
 package de.unidue.langtech.grading;
 
+import static java.util.Arrays.asList;
 import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngineDescription;
 
 import java.io.IOException;
@@ -12,26 +13,28 @@ import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.fit.component.NoOpAnnotator;
 import org.apache.uima.resource.ResourceInitializationException;
 
-import weka.classifiers.bayes.NaiveBayes;
+import weka.attributeSelection.InfoGainAttributeEval;
+import weka.attributeSelection.Ranker;
+import weka.classifiers.functions.SMO;
+import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpDependencyParser;
+import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpPosTagger;
 import de.tudarmstadt.ukp.dkpro.core.jazzy.SpellChecker;
-import de.tudarmstadt.ukp.dkpro.core.stanfordnlp.StanfordParser;
 import de.tudarmstadt.ukp.dkpro.core.tokit.BreakIteratorSegmenter;
 import de.tudarmstadt.ukp.dkpro.core.treetagger.TreeTaggerChunkerTT4J;
-import de.tudarmstadt.ukp.dkpro.core.treetagger.TreeTaggerPosLemmaTT4J;
 import de.tudarmstadt.ukp.dkpro.lab.Lab;
 import de.tudarmstadt.ukp.dkpro.lab.task.Dimension;
 import de.tudarmstadt.ukp.dkpro.lab.task.ParameterSpace;
 import de.tudarmstadt.ukp.dkpro.lab.task.impl.BatchTask.ExecutionPolicy;
 import de.tudarmstadt.ukp.dkpro.tc.core.Constants;
-import de.tudarmstadt.ukp.dkpro.tc.features.length.NrOfCharsDFE;
-import de.tudarmstadt.ukp.dkpro.tc.features.length.NrOfSentencesDFE;
 import de.tudarmstadt.ukp.dkpro.tc.features.length.NrOfTokensDFE;
+import de.tudarmstadt.ukp.dkpro.tc.features.ngram.DependencyDFE;
+import de.tudarmstadt.ukp.dkpro.tc.features.ngram.LuceneCharacterNGramDFE;
 import de.tudarmstadt.ukp.dkpro.tc.features.ngram.LuceneNGramDFE;
+import de.tudarmstadt.ukp.dkpro.tc.features.ngram.LuceneSkipNGramDFE;
 import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchCrossValidationReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchOutcomeIDReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchRuntimeReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchTrainTestReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.ClassificationReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.report.FeatureValuesReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskCrossValidation;
 import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskTrainTest;
@@ -73,10 +76,9 @@ public class ASAP2Experiment
 //	        ParameterSpace pSpace = getParameterSpace(essaySetId, TRAIN_DATA_CONSISTENT, TEST_DATA);
 
 	        ASAP2Experiment experiment = new ASAP2Experiment();
-	        experiment.runCrossValidation(pSpace);
+//	        experiment.runCrossValidation(pSpace);
 	        experiment.runTrainTest(pSpace);
         }
-
     }
     
     @SuppressWarnings("unchecked")
@@ -100,47 +102,53 @@ public class ASAP2Experiment
                         Asap2Reader.PARAM_ESSAY_SET_ID, essaySetId));
 
         Dimension<List<String>> dimClassificationArgs = Dimension.create(DIM_CLASSIFICATION_ARGS,
-//                Arrays.asList(new String[] { SMO.class.getName() }),
-                Arrays.asList(new String[] { NaiveBayes.class.getName() }));
+                Arrays.asList(new String[] { SMO.class.getName() })
+//                ,
+//                Arrays.asList(new String[] { NaiveBayes.class.getName() })
+        );
 
         Dimension<List<Object>> dimPipelineParameters = Dimension.create(
                 DIM_PIPELINE_PARAMS,
 //                Arrays.asList(new Object[] {
 //                		LuceneNGramDFE.PARAM_NGRAM_USE_TOP_K, 500,
-//                        LuceneNGramDFE.PARAM_NGRAM_MIN_N, 1,
-//                        LuceneNGramDFE.PARAM_NGRAM_MAX_N, 3,
 //                        LuceneNGramDFE.PARAM_NGRAM_STOPWORDS_FILE, stopwordList
 //                }),
                 Arrays.asList(new Object[] {
-                		LuceneNGramDFE.PARAM_NGRAM_USE_TOP_K, 1000,
-                        LuceneNGramDFE.PARAM_NGRAM_MIN_N, 1,
-                        LuceneNGramDFE.PARAM_NGRAM_MAX_N, 3,
-                        LuceneNGramDFE.PARAM_NGRAM_STOPWORDS_FILE, stopwordList
+                		LuceneNGramDFE.PARAM_NGRAM_USE_TOP_K, 10000,
+                        LuceneNGramDFE.PARAM_NGRAM_STOPWORDS_FILE, stopwordList,
+                        LuceneSkipNGramDFE.PARAM_NGRAM_USE_TOP_K, 5000,
+                        LuceneCharacterNGramDFE.PARAM_CHAR_NGRAM_MAX_N, 5
                 })
         );
 
         Dimension<List<String>> dimFeatureSets = Dimension.create(
                 DIM_FEATURE_SET,
-//                // length baseline
-//                Arrays.asList(new String[] {
-//                    NrOfCharsDFE.class.getName(),
-//                    NrOfSentencesDFE.class.getName(),
-//                    NrOfTokensDFE.class.getName()       
-//                }),
-                // + ngrams
                 Arrays.asList(new String[] {
-                    NrOfCharsDFE.class.getName(),
-                    NrOfSentencesDFE.class.getName(),
                     NrOfTokensDFE.class.getName(),
-                    LuceneNGramDFE.class.getName()         
+                    LuceneNGramDFE.class.getName(),
+                    LuceneSkipNGramDFE.class.getName(),
+                    LuceneCharacterNGramDFE.class.getName(),
+                    DependencyDFE.class.getName()
                 })
         );
+        
+        // single-label feature selection (Weka specific options), reduces the feature set to k features
+        Map<String, Object> dimFeatureSelection = new HashMap<String, Object>();
+        dimFeatureSelection.put(DIM_FEATURE_SEARCHER_ARGS,
+                asList(new String[] { Ranker.class.getName(), "-N", "10000" }));
+        dimFeatureSelection.put(DIM_ATTRIBUTE_EVALUATOR_ARGS,
+                asList(new String[] { InfoGainAttributeEval.class.getName() }));
+        dimFeatureSelection.put(DIM_APPLY_FEATURE_SELECTION, true);
 
         ParameterSpace pSpace = new ParameterSpace(Dimension.createBundle("readers", dimReaders),
                 Dimension.create(DIM_DATA_WRITER, WekaDataWriter.class.getName()),
-                Dimension.create(DIM_LEARNING_MODE, LM_SINGLE_LABEL), Dimension.create(
-                        DIM_FEATURE_MODE, FM_DOCUMENT), dimPipelineParameters, dimFeatureSets,
-                dimClassificationArgs);
+                Dimension.create(DIM_LEARNING_MODE, LM_SINGLE_LABEL),
+                Dimension.create(DIM_FEATURE_MODE, FM_DOCUMENT),
+                dimPipelineParameters,
+                dimFeatureSets,
+                dimClassificationArgs,
+                Dimension.createBundle("featureSelection", dimFeatureSelection)
+        );
 
         return pSpace;
     }
@@ -151,11 +159,10 @@ public class ASAP2Experiment
     {
         BatchTaskCrossValidation batch = new BatchTaskCrossValidation("ASAP-CV",
                 getPreprocessing(), NUM_FOLDS);
-        batch.addInnerReport(ClassificationReport.class);
-        // add a second report to TestTask which creates a report about average feature values for
+        // adds a report to TestTask which creates a report about average feature values for
         // each outcome label
         batch.addInnerReport(FeatureValuesReport.class);
-        // add a third report that computes the kappa values
+        // computes and stores the kappa values
         batch.addInnerReport(KappaReport.class);
         batch.setParameterSpace(pSpace);
         batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
@@ -172,13 +179,11 @@ public class ASAP2Experiment
     {
         BatchTaskTrainTest batch = new BatchTaskTrainTest("ASAP-TrainTest",
                 getPreprocessing());
-        batch.addInnerReport(ClassificationReport.class);
-        // add a second report to TestTask which creates a report about average feature values for
+        // adds a report to TestTask which creates a report about average feature values for
         // each outcome label
         batch.addInnerReport(FeatureValuesReport.class);
-        // add a third report that computes the kappa values
-        batch.addInnerReport(KappaReport.class);
-        
+        // computes and stores the kappa values
+        batch.addInnerReport(KappaReport.class);    
         batch.setParameterSpace(pSpace);
         batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
         batch.addReport(BatchTrainTestReport.class);
@@ -198,9 +203,13 @@ public class ASAP2Experiment
         AnalysisEngineDescription parser       = createEngineDescription(NoOpAnnotator.class);
         
         if (useTagger) {
+//            tagger = createEngineDescription(
+//                    TreeTaggerPosLemmaTT4J.class,
+//                    TreeTaggerPosLemmaTT4J.PARAM_LANGUAGE, LANGUAGE_CODE
+//            );
             tagger = createEngineDescription(
-                    TreeTaggerPosLemmaTT4J.class,
-                    TreeTaggerPosLemmaTT4J.PARAM_LANGUAGE, LANGUAGE_CODE
+                    ClearNlpPosTagger.class,
+                    ClearNlpPosTagger.PARAM_LANGUAGE, LANGUAGE_CODE
             );
         }
         
@@ -219,9 +228,13 @@ public class ASAP2Experiment
         }
         
         if (useParsing) {
+//            parser = createEngineDescription(
+//                    StanfordParser.class,
+//                    StanfordParser.PARAM_VARIANT, "pcfg"
+//            );
             parser = createEngineDescription(
-                    StanfordParser.class,
-                    StanfordParser.PARAM_VARIANT,"pcfg"
+                    ClearNlpDependencyParser.class,
+                    ClearNlpDependencyParser.PARAM_VARIANT, "ontonotes"
             );
         }
         
