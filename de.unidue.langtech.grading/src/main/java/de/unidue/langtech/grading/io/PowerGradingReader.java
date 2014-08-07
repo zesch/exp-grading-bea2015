@@ -1,13 +1,18 @@
 package de.unidue.langtech.grading.io;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.uima.UimaContext;
 import org.apache.uima.collection.CollectionException;
 import org.apache.uima.fit.component.JCasCollectionReader_ImplBase;
@@ -16,6 +21,9 @@ import org.apache.uima.jcas.JCas;
 import org.apache.uima.resource.ResourceInitializationException;
 import org.apache.uima.util.Progress;
 import org.apache.uima.util.ProgressImpl;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import de.tudarmstadt.ukp.dkpro.core.api.metadata.type.DocumentMetaData;
 import de.tudarmstadt.ukp.dkpro.core.api.resources.ResourceUtils;
@@ -52,6 +60,11 @@ public class PowerGradingReader
 
     protected Queue<PowerGradingItem> items;
     
+    private List<Integer> grades1;
+    private List<Integer> grades2;
+    private List<Integer> grades3;
+
+    
     @Override
     public void initialize(UimaContext aContext)
         throws ResourceInitializationException
@@ -63,6 +76,9 @@ public class PowerGradingReader
             requestedQuestionId = null;
         }
         
+        grades1 = new ArrayList<Integer>();
+        grades2 = new ArrayList<Integer>();
+        grades3 = new ArrayList<Integer>();
         
         try {
             inputFileURL = ResourceUtils.resolveLocation(inputFileString, this, aContext);
@@ -111,12 +127,29 @@ public class PowerGradingReader
                 PowerGradingItem newItem = new PowerGradingItem(studentId, questionId, text, grader1, grader2, grader3);
 
                 items.add(newItem);
-            }
+                
+                if (newItem.getGrader1() != -1) {
+                    grades1.add(newItem.getGrader1());
+                    grades2.add(newItem.getGrader2());
+                    grades3.add(newItem.getGrader3());           	
+                }
+            }   
         }
         catch (Exception e) {
             throw new ResourceInitializationException(e);
         }
-    
+        
+        Gson gson = new Gson();
+        Type listType = new TypeToken<List<Integer>>() {}.getType();
+
+        try {
+			FileUtils.writeStringToFile(new File("target/grades1.txt"), gson.toJson(grades1, listType));
+			FileUtils.writeStringToFile(new File("target/grades2.txt"), gson.toJson(grades2, listType));
+			FileUtils.writeStringToFile(new File("target/grades3.txt"), gson.toJson(grades3, listType));
+		} catch (IOException e) {
+			throw new ResourceInitializationException(e);
+		}
+
         currentIndex = 0;
     }
     
@@ -159,9 +192,11 @@ public class PowerGradingReader
         TextClassificationOutcome outcome = new TextClassificationOutcome(jcas);
         outcome.setOutcome(Integer.toString(item.getGrader1()));
         outcome.addToIndexes();
-        
+
         currentIndex++;
     }
+    
+    
     
     @Override
     public Progress[] getProgress()

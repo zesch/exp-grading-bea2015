@@ -58,8 +58,8 @@ public class PowergradingBaselineExperiment
 
     public static final int NUM_FOLDS = 5;
 
-    public static final String TRAIN_DATA_ALL = "classpath:/powergrading/studentanswers_grades_698.tsv";
-    public static final String TEST_DATA_ALL = "classpath:/powergrading/studentanswers_grades_698.tsv";
+    public static final String TRAIN_DATA_ALL = "classpath:/powergrading/train_70.txt";
+    public static final String TEST_DATA_ALL = "classpath:/powergrading/test_30.txt";
 
 	public static final Integer[] questionIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 13, 20 };
 
@@ -75,8 +75,8 @@ public class PowergradingBaselineExperiment
 	        ParameterSpace pSpace = getParameterSpace(questionId, TRAIN_DATA_ALL, TEST_DATA_ALL);
 
 	        PowergradingBaselineExperiment experiment = new PowergradingBaselineExperiment();
-	        experiment.runCrossValidation(pSpace);
-//	        experiment.runTrainTest(pSpace);
+//	        experiment.runCrossValidation(pSpace);
+	        experiment.runTrainTest(pSpace);
         }
     }
     
@@ -155,7 +155,7 @@ public class PowergradingBaselineExperiment
     protected void runCrossValidation(ParameterSpace pSpace)
         throws Exception
     {
-        BatchTaskCrossValidation batch = new BatchTaskCrossValidation("ASAP-CV",
+        BatchTaskCrossValidation batch = new BatchTaskCrossValidation("Powergrading-CV",
                 getPreprocessing(), NUM_FOLDS);
         // adds a report to TestTask which creates a report about average feature values for
         // each outcome label
@@ -175,7 +175,7 @@ public class PowergradingBaselineExperiment
     protected void runTrainTest(ParameterSpace pSpace)
         throws Exception
     {
-        BatchTaskTrainTest batch = new BatchTaskTrainTest("ASAP-TrainTest",
+        BatchTaskTrainTest batch = new BatchTaskTrainTest("Powergrading-TrainTest",
                 getPreprocessing());
         // adds a report to TestTask which creates a report about average feature values for
         // each outcome label
