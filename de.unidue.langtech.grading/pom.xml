@@ -137,6 +137,11 @@
     	</artifactId>
     	<version>20131128.0</version>
     </dependency>
+    <dependency>
+    	<groupId>com.clearnlp</groupId>
+    	<artifactId>clearnlp-dictionary</artifactId>
+    	<version>1.0</version>
+    </dependency>
   </dependencies>
   <dependencyManagement>
     <dependencies>

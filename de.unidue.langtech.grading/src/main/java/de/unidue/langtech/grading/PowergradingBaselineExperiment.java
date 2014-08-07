@@ -17,10 +17,11 @@ import weka.attributeSelection.InfoGainAttributeEval;
 import weka.attributeSelection.Ranker;
 import weka.classifiers.functions.SMO;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpDependencyParser;
+import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpLemmatizer;
+import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpPosTagger;
+import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpSegmenter;
 import de.tudarmstadt.ukp.dkpro.core.jazzy.SpellChecker;
-import de.tudarmstadt.ukp.dkpro.core.tokit.BreakIteratorSegmenter;
 import de.tudarmstadt.ukp.dkpro.core.treetagger.TreeTaggerChunkerTT4J;
-import de.tudarmstadt.ukp.dkpro.core.treetagger.TreeTaggerPosLemmaTT4J;
 import de.tudarmstadt.ukp.dkpro.lab.Lab;
 import de.tudarmstadt.ukp.dkpro.lab.task.Dimension;
 import de.tudarmstadt.ukp.dkpro.lab.task.ParameterSpace;
@@ -39,10 +40,10 @@ import de.tudarmstadt.ukp.dkpro.tc.weka.report.FeatureValuesReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskCrossValidation;
 import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskTrainTest;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
-import de.unidue.langtech.grading.io.Asap2Reader;
+import de.unidue.langtech.grading.io.PowerGradingReader;
 import de.unidue.langtech.grading.report.KappaReport;
 
-public class ASAP2Experiment
+public class PowergradingBaselineExperiment
     implements Constants
 {
 	
@@ -57,12 +58,11 @@ public class ASAP2Experiment
 
     public static final int NUM_FOLDS = 5;
 
-    public static final String TRAIN_DATA_ALL        = "classpath:/asap/train.tsv";
-    public static final String TRAIN_DATA_CONSISTENT = "classpath:/asap/train_consistent_items.tsv";
-    public static final String TEST_DATA             = "classpath:/asap/test_public.txt";
+    public static final String TRAIN_DATA_ALL = "classpath:/powergrading/studentanswers_grades_698.tsv";
+    public static final String TEST_DATA_ALL = "classpath:/powergrading/studentanswers_grades_698.tsv";
 
-	public static final Integer[] essaySetIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-  
+	public static final Integer[] questionIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 13, 20 };
+
     public static final boolean useTagger = true;
     public static final boolean useChunker = false;
     public static final boolean useParsing = true;
@@ -71,35 +71,34 @@ public class ASAP2Experiment
     public static void main(String[] args)
         throws Exception
     {
-        for (int essaySetId : essaySetIds) {
-	        ParameterSpace pSpace = getParameterSpace(essaySetId, TRAIN_DATA_ALL, TEST_DATA);
-//	        ParameterSpace pSpace = getParameterSpace(essaySetId, TRAIN_DATA_CONSISTENT, TEST_DATA);
+        for (int questionId : questionIds) {
+	        ParameterSpace pSpace = getParameterSpace(questionId, TRAIN_DATA_ALL, TEST_DATA_ALL);
 
-	        ASAP2Experiment experiment = new ASAP2Experiment();
-//	        experiment.runCrossValidation(pSpace);
-	        experiment.runTrainTest(pSpace);
+	        PowergradingBaselineExperiment experiment = new PowergradingBaselineExperiment();
+	        experiment.runCrossValidation(pSpace);
+//	        experiment.runTrainTest(pSpace);
         }
     }
     
     @SuppressWarnings("unchecked")
-    public static ParameterSpace getParameterSpace(int essaySetId, String trainFile, String testFile) 
+    public static ParameterSpace getParameterSpace(int questionId, String trainFile, String testFile) 
     		throws IOException
     {
         // configure training and test data reader dimension
         // train/test will use both, while cross-validation will only use the train part
         Map<String, Object> dimReaders = new HashMap<String, Object>();
-        dimReaders.put(DIM_READER_TRAIN, Asap2Reader.class);
+        dimReaders.put(DIM_READER_TRAIN, PowerGradingReader.class);
         dimReaders.put(
                 DIM_READER_TRAIN_PARAMS,
                 Arrays.asList(
-                        Asap2Reader.PARAM_INPUT_FILE, trainFile,
-                        Asap2Reader.PARAM_ESSAY_SET_ID, essaySetId));
-        dimReaders.put(DIM_READER_TEST, Asap2Reader.class);
+                		PowerGradingReader.PARAM_INPUT_FILE, trainFile,
+                		PowerGradingReader.PARAM_QUESTION_ID, questionId));
+        dimReaders.put(DIM_READER_TEST, PowerGradingReader.class);
         dimReaders.put(
                 DIM_READER_TEST_PARAMS,
                 Arrays.asList(
-                        Asap2Reader.PARAM_INPUT_FILE, testFile,
-                        Asap2Reader.PARAM_ESSAY_SET_ID, essaySetId));
+                		PowerGradingReader.PARAM_INPUT_FILE, testFile,
+                		PowerGradingReader.PARAM_QUESTION_ID, questionId));
 
         Dimension<List<String>> dimClassificationArgs = Dimension.create(DIM_CLASSIFICATION_ARGS,
                 Arrays.asList(new String[] { SMO.class.getName() })
@@ -114,10 +113,9 @@ public class ASAP2Experiment
 //                        LuceneNGramDFE.PARAM_NGRAM_STOPWORDS_FILE, stopwordList
 //                }),
                 Arrays.asList(new Object[] {
-                		LuceneNGramDFE.PARAM_NGRAM_USE_TOP_K, 5000,
+                		LuceneNGramDFE.PARAM_NGRAM_USE_TOP_K, 500,
                         LuceneNGramDFE.PARAM_NGRAM_STOPWORDS_FILE, stopwordList,
-                        LuceneSkipNGramDFE.PARAM_NGRAM_USE_TOP_K, 5000,
-                        LuceneCharacterNGramDFE.PARAM_CHAR_NGRAM_MAX_N, 3
+                        LuceneSkipNGramDFE.PARAM_NGRAM_USE_TOP_K, 500
                 })
         );
 
@@ -198,20 +196,24 @@ public class ASAP2Experiment
         throws ResourceInitializationException
     {
         AnalysisEngineDescription tagger       = createEngineDescription(NoOpAnnotator.class);
+        AnalysisEngineDescription lemmatizer   = createEngineDescription(NoOpAnnotator.class);
         AnalysisEngineDescription chunker      = createEngineDescription(NoOpAnnotator.class);
         AnalysisEngineDescription spellChecker = createEngineDescription(NoOpAnnotator.class);
         AnalysisEngineDescription parser       = createEngineDescription(NoOpAnnotator.class);
         
         if (useTagger) {
         	System.out.println("Running tagger ...");
-            tagger = createEngineDescription(
-                    TreeTaggerPosLemmaTT4J.class,
-                    TreeTaggerPosLemmaTT4J.PARAM_LANGUAGE, LANGUAGE_CODE
-            );
 //            tagger = createEngineDescription(
-//                    ClearNlpPosTagger.class,
-//                    ClearNlpPosTagger.PARAM_LANGUAGE, LANGUAGE_CODE
+//                    TreeTaggerPosLemmaTT4J.class,
+//                    TreeTaggerPosLemmaTT4J.PARAM_LANGUAGE, LANGUAGE_CODE
 //            );
+            tagger = createEngineDescription(
+                    ClearNlpPosTagger.class,
+                    ClearNlpPosTagger.PARAM_LANGUAGE, LANGUAGE_CODE
+            );
+            lemmatizer = createEngineDescription(
+                    ClearNlpLemmatizer.class
+            );
         }
         
         if (useChunker) {
@@ -229,7 +231,7 @@ public class ASAP2Experiment
         }
         
         if (useParsing) {
-        	System.out.println("Running tagger ...");
+        	System.out.println("Running parser ...");
 //            parser = createEngineDescription(
 //                    StanfordParser.class,
 //                    StanfordParser.PARAM_VARIANT, "pcfg"
@@ -242,10 +244,11 @@ public class ASAP2Experiment
         
         return createEngineDescription(
                 createEngineDescription(
-                        BreakIteratorSegmenter.class
+                        ClearNlpSegmenter.class
                 ),
                 spellChecker,
                 tagger,
+                lemmatizer,
                 chunker,
                 parser
         );

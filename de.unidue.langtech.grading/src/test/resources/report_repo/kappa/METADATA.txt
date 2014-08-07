@@ -1,0 +1,6 @@
+#Fri Aug 16 16:36:57 CEST 2013
+end=1376663817176
+uuid=kappa
+type=package de.tudarmstadt.ukp.dkpro.lab.task.ReportingTask
+begin=1376663806856
+duration=10s
