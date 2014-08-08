@@ -40,10 +40,10 @@ import de.tudarmstadt.ukp.dkpro.tc.weka.report.FeatureValuesReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskCrossValidation;
 import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskTrainTest;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
-import de.unidue.langtech.grading.io.PowerGradingReader;
+import de.unidue.langtech.grading.io.Asap2Reader;
 import de.unidue.langtech.grading.report.KappaReport;
 
-public class PowergradingBaselineExperiment
+public class AsapBaseline
     implements Constants
 {
 	
@@ -58,10 +58,11 @@ public class PowergradingBaselineExperiment
 
     public static final int NUM_FOLDS = 5;
 
-    public static final String TRAIN_DATA_ALL = "classpath:/powergrading/train_70.txt";
-    public static final String TEST_DATA_ALL = "classpath:/powergrading/test_30.txt";
+    public static final String TRAIN_DATA_ALL        = "classpath:/asap/train.tsv";
+    public static final String TRAIN_DATA_CONSISTENT = "classpath:/asap/train_consistent_items.tsv";
+    public static final String TEST_DATA             = "classpath:/asap/test_public.txt";
 
-	public static final Integer[] questionIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 13, 20 };
+	public static final Integer[] essaySetIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 
     public static final boolean useTagger = true;
     public static final boolean useChunker = false;
@@ -71,34 +72,35 @@ public class PowergradingBaselineExperiment
     public static void main(String[] args)
         throws Exception
     {
-        for (int questionId : questionIds) {
-	        ParameterSpace pSpace = getParameterSpace(questionId, TRAIN_DATA_ALL, TEST_DATA_ALL);
+        for (int essaySetId : essaySetIds) {
+	        ParameterSpace pSpace = getParameterSpace(essaySetId, TRAIN_DATA_ALL, TEST_DATA);
+//	        ParameterSpace pSpace = getParameterSpace(essaySetId, TRAIN_DATA_CONSISTENT, TEST_DATA);
 
-	        PowergradingBaselineExperiment experiment = new PowergradingBaselineExperiment();
+	        AsapBaseline experiment = new AsapBaseline();
 //	        experiment.runCrossValidation(pSpace);
 	        experiment.runTrainTest(pSpace);
         }
     }
     
     @SuppressWarnings("unchecked")
-    public static ParameterSpace getParameterSpace(int questionId, String trainFile, String testFile) 
+    public static ParameterSpace getParameterSpace(int essaySetId, String trainFile, String testFile) 
     		throws IOException
     {
         // configure training and test data reader dimension
         // train/test will use both, while cross-validation will only use the train part
         Map<String, Object> dimReaders = new HashMap<String, Object>();
-        dimReaders.put(DIM_READER_TRAIN, PowerGradingReader.class);
+        dimReaders.put(DIM_READER_TRAIN, Asap2Reader.class);
         dimReaders.put(
                 DIM_READER_TRAIN_PARAMS,
                 Arrays.asList(
-                		PowerGradingReader.PARAM_INPUT_FILE, trainFile,
-                		PowerGradingReader.PARAM_QUESTION_ID, questionId));
-        dimReaders.put(DIM_READER_TEST, PowerGradingReader.class);
+                        Asap2Reader.PARAM_INPUT_FILE, trainFile,
+                        Asap2Reader.PARAM_ESSAY_SET_ID, essaySetId));
+        dimReaders.put(DIM_READER_TEST, Asap2Reader.class);
         dimReaders.put(
                 DIM_READER_TEST_PARAMS,
                 Arrays.asList(
-                		PowerGradingReader.PARAM_INPUT_FILE, testFile,
-                		PowerGradingReader.PARAM_QUESTION_ID, questionId));
+                        Asap2Reader.PARAM_INPUT_FILE, testFile,
+                        Asap2Reader.PARAM_ESSAY_SET_ID, essaySetId));
 
         Dimension<List<String>> dimClassificationArgs = Dimension.create(DIM_CLASSIFICATION_ARGS,
                 Arrays.asList(new String[] { SMO.class.getName() })
@@ -113,9 +115,9 @@ public class PowergradingBaselineExperiment
 //                        LuceneNGramDFE.PARAM_NGRAM_STOPWORDS_FILE, stopwordList
 //                }),
                 Arrays.asList(new Object[] {
-                		LuceneNGramDFE.PARAM_NGRAM_USE_TOP_K, 500,
+                		LuceneNGramDFE.PARAM_NGRAM_USE_TOP_K, 5000,
                         LuceneNGramDFE.PARAM_NGRAM_STOPWORDS_FILE, stopwordList,
-                        LuceneSkipNGramDFE.PARAM_NGRAM_USE_TOP_K, 500
+                        LuceneSkipNGramDFE.PARAM_NGRAM_USE_TOP_K, 5000
                 })
         );
 
@@ -155,7 +157,7 @@ public class PowergradingBaselineExperiment
     protected void runCrossValidation(ParameterSpace pSpace)
         throws Exception
     {
-        BatchTaskCrossValidation batch = new BatchTaskCrossValidation("Powergrading-CV",
+        BatchTaskCrossValidation batch = new BatchTaskCrossValidation("ASAP-CV",
                 getPreprocessing(), NUM_FOLDS);
         // adds a report to TestTask which creates a report about average feature values for
         // each outcome label
@@ -175,7 +177,7 @@ public class PowergradingBaselineExperiment
     protected void runTrainTest(ParameterSpace pSpace)
         throws Exception
     {
-        BatchTaskTrainTest batch = new BatchTaskTrainTest("Powergrading-TrainTest",
+        BatchTaskTrainTest batch = new BatchTaskTrainTest("ASAP-TrainTest",
                 getPreprocessing());
         // adds a report to TestTask which creates a report about average feature values for
         // each outcome label

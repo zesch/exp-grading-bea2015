@@ -83,7 +83,7 @@ public class CbalReader
                 if (nextLine.startsWith(",CandidateID,")) {
                     nextLine = reader.readLine();
                 }
-                
+
                 String[] nextItem = nextLine.split(separator, 7);
                 
                 String studentId = null;

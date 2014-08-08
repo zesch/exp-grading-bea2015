@@ -42,12 +42,21 @@ import de.tudarmstadt.ukp.dkpro.tc.weka.report.FeatureValuesReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskCrossValidation;
 import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskTrainTest;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
-import de.unidue.langtech.grading.io.CbalReader;
+import de.unidue.langtech.grading.io.RfuReader;
 import de.unidue.langtech.grading.report.KappaReport;
 
-public class CbalBaselineExperiment
+public class RfuBaseline
     implements Constants
 {
+	
+    public static final String[] rfuQuestions = new String[] {
+    	"harlem_paraphrase",
+    	"harlem_synopsis",
+    	"immigration_door",
+    	"immigration_paraphrase",
+    	"immigration_synopsis",
+    	"immigration_traveling"
+    };
 	
     public static final String LANGUAGE_CODE = "en";
 
@@ -67,12 +76,12 @@ public class CbalBaselineExperiment
     public static void main(String[] args)
         throws Exception
     {
-        File baseDir = new File(new DkproContext().getWorkspace("ETS").getAbsolutePath() + "/CBAL");
+        File baseDir = new File(new DkproContext().getWorkspace("ETS").getAbsolutePath() + "/RFU");
 
-        for (String question : CbalReader.cbalQuestions) {
+        for (String question : rfuQuestions) {
 	        ParameterSpace pSpace = getParameterSpace(baseDir.getAbsolutePath(), question);
 
-	        CbalBaselineExperiment experiment = new CbalBaselineExperiment();
+	        RfuBaseline experiment = new RfuBaseline();
 //	        experiment.runCrossValidation(pSpace);
 	        experiment.runTrainTest(pSpace);
         }
@@ -85,17 +94,17 @@ public class CbalBaselineExperiment
         // configure training and test data reader dimension
         // train/test will use both, while cross-validation will only use the train part
         Map<String, Object> dimReaders = new HashMap<String, Object>();
-        dimReaders.put(DIM_READER_TRAIN, CbalReader.class);
+        dimReaders.put(DIM_READER_TRAIN, RfuReader.class);
         dimReaders.put(
                 DIM_READER_TRAIN_PARAMS,
                 Arrays.asList(
-                		CbalReader.PARAM_INPUT_FILE, basedir + "/" + question + ".train.csv"
+                		RfuReader.PARAM_INPUT_FILE, basedir + "/" + question + "_train.txt"
         ));
-        dimReaders.put(DIM_READER_TEST, CbalReader.class);
+        dimReaders.put(DIM_READER_TEST, RfuReader.class);
         dimReaders.put(
                 DIM_READER_TEST_PARAMS,
                 Arrays.asList(
-                		CbalReader.PARAM_INPUT_FILE, basedir + "/" + question + ".test.csv"
+                		RfuReader.PARAM_INPUT_FILE, basedir + "/" + question + "_test.txt"
         ));
 
         Dimension<List<String>> dimClassificationArgs = Dimension.create(DIM_CLASSIFICATION_ARGS,

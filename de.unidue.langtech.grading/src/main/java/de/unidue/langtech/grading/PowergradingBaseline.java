@@ -3,7 +3,6 @@ package de.unidue.langtech.grading;
 import static java.util.Arrays.asList;
 import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngineDescription;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -17,7 +16,6 @@ import org.apache.uima.resource.ResourceInitializationException;
 import weka.attributeSelection.InfoGainAttributeEval;
 import weka.attributeSelection.Ranker;
 import weka.classifiers.functions.SMO;
-import de.tudarmstadt.ukp.dkpro.core.api.resources.DkproContext;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpDependencyParser;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpLemmatizer;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpPosTagger;
@@ -42,24 +40,28 @@ import de.tudarmstadt.ukp.dkpro.tc.weka.report.FeatureValuesReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskCrossValidation;
 import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskTrainTest;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
-import de.unidue.langtech.grading.io.CbalReader;
+import de.unidue.langtech.grading.io.PowerGradingReader;
 import de.unidue.langtech.grading.report.KappaReport;
 
-public class RfuBaselineExperiment
+public class PowergradingBaseline
     implements Constants
 {
-	
-	
 	
     public static final String LANGUAGE_CODE = "en";
 
     public static final Boolean[] toLowerCase = new Boolean[] { true };
           
     public static final String stopwordList = "classpath:/stopwords/english_stopwords.txt";
+//    public static final String stopwordList = "classpath:/stopwords/english_empty.txt";
     
     public static final String SPELLING_VOCABULARY = "classpath:/vocabulary/en_US_dict.txt";
 
     public static final int NUM_FOLDS = 5;
+
+    public static final String TRAIN_DATA_ALL = "classpath:/powergrading/train_70.txt";
+    public static final String TEST_DATA_ALL = "classpath:/powergrading/test_30.txt";
+
+	public static final Integer[] questionIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 13, 20 };
 
     public static final boolean useTagger = true;
     public static final boolean useChunker = false;
@@ -69,36 +71,34 @@ public class RfuBaselineExperiment
     public static void main(String[] args)
         throws Exception
     {
-        File baseDir = new File(new DkproContext().getWorkspace("ETS").getAbsolutePath() + "/CBAL");
+        for (int questionId : questionIds) {
+	        ParameterSpace pSpace = getParameterSpace(questionId, TRAIN_DATA_ALL, TEST_DATA_ALL);
 
-        for (String question : CbalReader.cbalQuestions) {
-	        ParameterSpace pSpace = getParameterSpace(baseDir.getAbsolutePath(), question);
-
-	        RfuBaselineExperiment experiment = new RfuBaselineExperiment();
-	        experiment.runCrossValidation(pSpace);
-//	        experiment.runTrainTest(pSpace);
+	        PowergradingBaseline experiment = new PowergradingBaseline();
+//	        experiment.runCrossValidation(pSpace);
+	        experiment.runTrainTest(pSpace);
         }
     }
     
     @SuppressWarnings("unchecked")
-    public static ParameterSpace getParameterSpace(String basedir, String question) 
+    public static ParameterSpace getParameterSpace(int questionId, String trainFile, String testFile) 
     		throws IOException
     {
         // configure training and test data reader dimension
         // train/test will use both, while cross-validation will only use the train part
         Map<String, Object> dimReaders = new HashMap<String, Object>();
-        dimReaders.put(DIM_READER_TRAIN, CbalReader.class);
+        dimReaders.put(DIM_READER_TRAIN, PowerGradingReader.class);
         dimReaders.put(
                 DIM_READER_TRAIN_PARAMS,
                 Arrays.asList(
-                		CbalReader.PARAM_INPUT_FILE, basedir + "/" + question + ".train.csv"
-        ));
-        dimReaders.put(DIM_READER_TEST, CbalReader.class);
+                		PowerGradingReader.PARAM_INPUT_FILE, trainFile,
+                		PowerGradingReader.PARAM_QUESTION_ID, questionId));
+        dimReaders.put(DIM_READER_TEST, PowerGradingReader.class);
         dimReaders.put(
                 DIM_READER_TEST_PARAMS,
                 Arrays.asList(
-                		CbalReader.PARAM_INPUT_FILE, basedir + "/" + question + ".test.csv"
-        ));
+                		PowerGradingReader.PARAM_INPUT_FILE, testFile,
+                		PowerGradingReader.PARAM_QUESTION_ID, questionId));
 
         Dimension<List<String>> dimClassificationArgs = Dimension.create(DIM_CLASSIFICATION_ARGS,
                 Arrays.asList(new String[] { SMO.class.getName() })
@@ -113,9 +113,9 @@ public class RfuBaselineExperiment
 //                        LuceneNGramDFE.PARAM_NGRAM_STOPWORDS_FILE, stopwordList
 //                }),
                 Arrays.asList(new Object[] {
-                		LuceneNGramDFE.PARAM_NGRAM_USE_TOP_K, 5000,
+                		LuceneNGramDFE.PARAM_NGRAM_USE_TOP_K, 500,
                         LuceneNGramDFE.PARAM_NGRAM_STOPWORDS_FILE, stopwordList,
-                        LuceneSkipNGramDFE.PARAM_NGRAM_USE_TOP_K, 5000
+                        LuceneSkipNGramDFE.PARAM_NGRAM_USE_TOP_K, 500
                 })
         );
 
@@ -155,7 +155,7 @@ public class RfuBaselineExperiment
     protected void runCrossValidation(ParameterSpace pSpace)
         throws Exception
     {
-        BatchTaskCrossValidation batch = new BatchTaskCrossValidation("CBAL-CV",
+        BatchTaskCrossValidation batch = new BatchTaskCrossValidation("Powergrading-CV",
                 getPreprocessing(), NUM_FOLDS);
         // adds a report to TestTask which creates a report about average feature values for
         // each outcome label
@@ -175,7 +175,7 @@ public class RfuBaselineExperiment
     protected void runTrainTest(ParameterSpace pSpace)
         throws Exception
     {
-        BatchTaskTrainTest batch = new BatchTaskTrainTest("CBAL-TrainTest",
+        BatchTaskTrainTest batch = new BatchTaskTrainTest("Powergrading-TrainTest",
                 getPreprocessing());
         // adds a report to TestTask which creates a report about average feature values for
         // each outcome label

@@ -3,6 +3,7 @@ package de.unidue.langtech.grading;
 import static java.util.Arrays.asList;
 import static org.apache.uima.fit.factory.AnalysisEngineFactory.createEngineDescription;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -16,6 +17,7 @@ import org.apache.uima.resource.ResourceInitializationException;
 import weka.attributeSelection.InfoGainAttributeEval;
 import weka.attributeSelection.Ranker;
 import weka.classifiers.functions.SMO;
+import de.tudarmstadt.ukp.dkpro.core.api.resources.DkproContext;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpDependencyParser;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpLemmatizer;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpPosTagger;
@@ -40,10 +42,10 @@ import de.tudarmstadt.ukp.dkpro.tc.weka.report.FeatureValuesReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskCrossValidation;
 import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskTrainTest;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
-import de.unidue.langtech.grading.io.Asap2Reader;
+import de.unidue.langtech.grading.io.CbalReader;
 import de.unidue.langtech.grading.report.KappaReport;
 
-public class AsapBaselineExperiment
+public class CbalBaseline
     implements Constants
 {
 	
@@ -52,17 +54,10 @@ public class AsapBaselineExperiment
     public static final Boolean[] toLowerCase = new Boolean[] { true };
           
     public static final String stopwordList = "classpath:/stopwords/english_stopwords.txt";
-//    public static final String stopwordList = "classpath:/stopwords/english_empty.txt";
     
     public static final String SPELLING_VOCABULARY = "classpath:/vocabulary/en_US_dict.txt";
 
     public static final int NUM_FOLDS = 5;
-
-    public static final String TRAIN_DATA_ALL        = "classpath:/asap/train.tsv";
-    public static final String TRAIN_DATA_CONSISTENT = "classpath:/asap/train_consistent_items.tsv";
-    public static final String TEST_DATA             = "classpath:/asap/test_public.txt";
-
-	public static final Integer[] essaySetIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 
     public static final boolean useTagger = true;
     public static final boolean useChunker = false;
@@ -72,35 +67,36 @@ public class AsapBaselineExperiment
     public static void main(String[] args)
         throws Exception
     {
-        for (int essaySetId : essaySetIds) {
-	        ParameterSpace pSpace = getParameterSpace(essaySetId, TRAIN_DATA_ALL, TEST_DATA);
-//	        ParameterSpace pSpace = getParameterSpace(essaySetId, TRAIN_DATA_CONSISTENT, TEST_DATA);
+        File baseDir = new File(new DkproContext().getWorkspace("ETS").getAbsolutePath() + "/CBAL");
 
-	        AsapBaselineExperiment experiment = new AsapBaselineExperiment();
+        for (String question : CbalReader.cbalQuestions) {
+	        ParameterSpace pSpace = getParameterSpace(baseDir.getAbsolutePath(), question);
+
+	        CbalBaseline experiment = new CbalBaseline();
 //	        experiment.runCrossValidation(pSpace);
 	        experiment.runTrainTest(pSpace);
         }
     }
     
     @SuppressWarnings("unchecked")
-    public static ParameterSpace getParameterSpace(int essaySetId, String trainFile, String testFile) 
+    public static ParameterSpace getParameterSpace(String basedir, String question) 
     		throws IOException
     {
         // configure training and test data reader dimension
         // train/test will use both, while cross-validation will only use the train part
         Map<String, Object> dimReaders = new HashMap<String, Object>();
-        dimReaders.put(DIM_READER_TRAIN, Asap2Reader.class);
+        dimReaders.put(DIM_READER_TRAIN, CbalReader.class);
         dimReaders.put(
                 DIM_READER_TRAIN_PARAMS,
                 Arrays.asList(
-                        Asap2Reader.PARAM_INPUT_FILE, trainFile,
-                        Asap2Reader.PARAM_ESSAY_SET_ID, essaySetId));
-        dimReaders.put(DIM_READER_TEST, Asap2Reader.class);
+                		CbalReader.PARAM_INPUT_FILE, basedir + "/" + question + ".train.csv"
+        ));
+        dimReaders.put(DIM_READER_TEST, CbalReader.class);
         dimReaders.put(
                 DIM_READER_TEST_PARAMS,
                 Arrays.asList(
-                        Asap2Reader.PARAM_INPUT_FILE, testFile,
-                        Asap2Reader.PARAM_ESSAY_SET_ID, essaySetId));
+                		CbalReader.PARAM_INPUT_FILE, basedir + "/" + question + ".test.csv"
+        ));
 
         Dimension<List<String>> dimClassificationArgs = Dimension.create(DIM_CLASSIFICATION_ARGS,
                 Arrays.asList(new String[] { SMO.class.getName() })
@@ -157,7 +153,7 @@ public class AsapBaselineExperiment
     protected void runCrossValidation(ParameterSpace pSpace)
         throws Exception
     {
-        BatchTaskCrossValidation batch = new BatchTaskCrossValidation("ASAP-CV",
+        BatchTaskCrossValidation batch = new BatchTaskCrossValidation("CBAL-CV",
                 getPreprocessing(), NUM_FOLDS);
         // adds a report to TestTask which creates a report about average feature values for
         // each outcome label
@@ -177,7 +173,7 @@ public class AsapBaselineExperiment
     protected void runTrainTest(ParameterSpace pSpace)
         throws Exception
     {
-        BatchTaskTrainTest batch = new BatchTaskTrainTest("ASAP-TrainTest",
+        BatchTaskTrainTest batch = new BatchTaskTrainTest("CBAL-TrainTest",
                 getPreprocessing());
         // adds a report to TestTask which creates a report about average feature values for
         // each outcome label

@@ -65,17 +65,17 @@ public class RfuReader
             String nextLine;
             while ((nextLine = reader.readLine()) != null) {
                 // skip the header
-                if (nextLine.startsWith("\"id\"")) {
+                if (nextLine.startsWith("id")) {
                     nextLine = reader.readLine();
                 }
-                
-                String[] nextItem = nextLine.split(separator);
-                
+
+                String[] nextItem = nextLine.split(separator, 3);
+                                
                 String id   = null;
                 String text = null;
                 int grade   = -1;
     
-                if (nextItem.length == 7) {
+                if (nextItem.length == 3) {
                     id    = nextItem[0];
                     text  = nextItem[1];
                     grade = Integer.parseInt(nextItem[2]);
@@ -85,7 +85,7 @@ public class RfuReader
                 }
                
                 GenericItem newItem = new GenericItem(id, text, grade);
-                
+
                 items.add(newItem);
             }   
         }
