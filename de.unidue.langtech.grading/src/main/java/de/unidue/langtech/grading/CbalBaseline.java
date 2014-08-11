@@ -23,7 +23,6 @@ import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpLemmatizer;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpPosTagger;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpSegmenter;
 import de.tudarmstadt.ukp.dkpro.core.jazzy.SpellChecker;
-import de.tudarmstadt.ukp.dkpro.core.treetagger.TreeTaggerChunkerTT4J;
 import de.tudarmstadt.ukp.dkpro.lab.Lab;
 import de.tudarmstadt.ukp.dkpro.lab.task.Dimension;
 import de.tudarmstadt.ukp.dkpro.lab.task.ParameterSpace;
@@ -214,12 +213,12 @@ public class CbalBaseline
             );
         }
         
-        if (useChunker) {
-            chunker = createEngineDescription(
-                    TreeTaggerChunkerTT4J.class,
-                    TreeTaggerChunkerTT4J.PARAM_LANGUAGE, LANGUAGE_CODE
-            );
-        }
+//        if (useChunker) {
+//            chunker = createEngineDescription(
+//                    TreeTaggerChunkerTT4J.class,
+//                    TreeTaggerChunkerTT4J.PARAM_LANGUAGE, LANGUAGE_CODE
+//            );
+//        }
 
         if (useSpellChecking) {
             spellChecker = createEngineDescription(
