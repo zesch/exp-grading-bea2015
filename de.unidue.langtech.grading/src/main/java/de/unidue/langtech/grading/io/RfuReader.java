@@ -83,6 +83,10 @@ public class RfuReader
                 else {
                     throw new IOException("Wrong file format.");
                 }
+                
+                if (text.length() == 0) {
+                	continue;
+                }
                
                 GenericItem newItem = new GenericItem(id, text, grade);
 
