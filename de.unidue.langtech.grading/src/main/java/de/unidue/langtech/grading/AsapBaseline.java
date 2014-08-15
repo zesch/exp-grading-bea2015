@@ -41,6 +41,8 @@ import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskTrainTest;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
 import de.unidue.langtech.grading.io.Asap2Reader;
 import de.unidue.langtech.grading.report.KappaReport;
+import de.unidue.langtech.grading.report.LearningCurveReport;
+import de.unidue.langtech.grading.tc.BatchTaskLearningCurve;
 
 public class AsapBaseline
     implements Constants
@@ -77,7 +79,8 @@ public class AsapBaseline
 
 	        AsapBaseline experiment = new AsapBaseline();
 //	        experiment.runCrossValidation(pSpace);
-	        experiment.runTrainTest(pSpace);
+//	        experiment.runTrainTest(pSpace);
+	        experiment.runLearningCurve(pSpace);
         }
     }
     
@@ -187,6 +190,22 @@ public class AsapBaseline
         batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
         batch.addReport(BatchTrainTestReport.class);
         batch.addReport(BatchOutcomeIDReport.class);
+        batch.addReport(BatchRuntimeReport.class);
+
+        // Run
+        Lab.getInstance().run(batch);
+    }
+    
+    // ##### LEARNING-CURVE #####
+    protected void runLearningCurve(ParameterSpace pSpace)
+        throws Exception
+    {
+        BatchTaskLearningCurve batch = new BatchTaskLearningCurve("ASAP-LearningCurve",
+                getPreprocessing());
+        // computes and stores the kappa values
+        batch.addInnerReport(LearningCurveReport.class);    
+        batch.setParameterSpace(pSpace);
+        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
         batch.addReport(BatchRuntimeReport.class);
 
         // Run

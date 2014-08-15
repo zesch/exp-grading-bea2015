@@ -62,7 +62,7 @@ public class PowergradingBaseline
     public static final String TRAIN_DATA_ALL = "classpath:/powergrading/train_70.txt";
     public static final String TEST_DATA_ALL = "classpath:/powergrading/test_30.txt";
 
-	public static final Integer[] questionIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 13, 20 };
+	public static final Integer[] powergradingQuestionIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 13, 20 };
 
     public static final boolean useTagger = true;
     public static final boolean useParsing = true;
@@ -71,7 +71,7 @@ public class PowergradingBaseline
     public static void main(String[] args)
         throws Exception
     {
-        for (int questionId : questionIds) {
+        for (int questionId : powergradingQuestionIds) {
 	        ParameterSpace pSpace = getParameterSpace(questionId, TRAIN_DATA_ALL, TEST_DATA_ALL);
 
 	        PowergradingBaseline experiment = new PowergradingBaseline();

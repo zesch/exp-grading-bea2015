@@ -43,16 +43,18 @@ import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskTrainTest;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
 import de.unidue.langtech.grading.io.RfuReader;
 import de.unidue.langtech.grading.report.KappaReport;
+import de.unidue.langtech.grading.report.LearningCurveReport;
+import de.unidue.langtech.grading.tc.BatchTaskLearningCurve;
 
 public class RfuBaseline
     implements Constants
 {
 	
     public static final String[] rfuQuestions = new String[] {
-    	"harlem_paraphrase",
+//    	"harlem_paraphrase",
     	"harlem_synopsis",
     	"immigration_door",
-    	"immigration_paraphrase",
+//    	"immigration_paraphrase",
     	"immigration_synopsis",
     	"immigration_traveling"
     };
@@ -82,7 +84,8 @@ public class RfuBaseline
 
 	        RfuBaseline experiment = new RfuBaseline();
 //	        experiment.runCrossValidation(pSpace);
-	        experiment.runTrainTest(pSpace);
+//	        experiment.runTrainTest(pSpace);
+	        experiment.runLearningCurve(pSpace);
         }
     }
     
@@ -161,7 +164,7 @@ public class RfuBaseline
     protected void runCrossValidation(ParameterSpace pSpace)
         throws Exception
     {
-        BatchTaskCrossValidation batch = new BatchTaskCrossValidation("CBAL-CV",
+        BatchTaskCrossValidation batch = new BatchTaskCrossValidation("RFU-CV",
                 getPreprocessing(), NUM_FOLDS);
         // adds a report to TestTask which creates a report about average feature values for
         // each outcome label
@@ -181,7 +184,7 @@ public class RfuBaseline
     protected void runTrainTest(ParameterSpace pSpace)
         throws Exception
     {
-        BatchTaskTrainTest batch = new BatchTaskTrainTest("CBAL-TrainTest",
+        BatchTaskTrainTest batch = new BatchTaskTrainTest("RFU-TrainTest",
                 getPreprocessing());
         // adds a report to TestTask which creates a report about average feature values for
         // each outcome label
@@ -192,6 +195,22 @@ public class RfuBaseline
         batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
         batch.addReport(BatchTrainTestReport.class);
         batch.addReport(BatchOutcomeIDReport.class);
+        batch.addReport(BatchRuntimeReport.class);
+
+        // Run
+        Lab.getInstance().run(batch);
+    }
+   
+    // ##### LEARNING-CURVE #####
+    protected void runLearningCurve(ParameterSpace pSpace)
+        throws Exception
+    {
+        BatchTaskLearningCurve batch = new BatchTaskLearningCurve("RFU-LearningCurve",
+                getPreprocessing());
+        // computes and stores the kappa values
+        batch.addInnerReport(LearningCurveReport.class);    
+        batch.setParameterSpace(pSpace);
+        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
         batch.addReport(BatchRuntimeReport.class);
 
         // Run

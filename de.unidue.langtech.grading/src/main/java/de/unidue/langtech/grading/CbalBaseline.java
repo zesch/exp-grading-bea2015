@@ -43,6 +43,8 @@ import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskTrainTest;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
 import de.unidue.langtech.grading.io.CbalReader;
 import de.unidue.langtech.grading.report.KappaReport;
+import de.unidue.langtech.grading.report.LearningCurveReport;
+import de.unidue.langtech.grading.tc.BatchTaskLearningCurve;
 
 public class CbalBaseline
     implements Constants
@@ -73,7 +75,8 @@ public class CbalBaseline
 
 	        CbalBaseline experiment = new CbalBaseline();
 //	        experiment.runCrossValidation(pSpace);
-	        experiment.runTrainTest(pSpace);
+//	        experiment.runTrainTest(pSpace);
+	        experiment.runLearningCurve(pSpace);
         }
     }
     
@@ -183,6 +186,22 @@ public class CbalBaseline
         batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
         batch.addReport(BatchTrainTestReport.class);
         batch.addReport(BatchOutcomeIDReport.class);
+        batch.addReport(BatchRuntimeReport.class);
+
+        // Run
+        Lab.getInstance().run(batch);
+    }
+    
+    // ##### LEARNING-CURVE #####
+    protected void runLearningCurve(ParameterSpace pSpace)
+        throws Exception
+    {
+        BatchTaskLearningCurve batch = new BatchTaskLearningCurve("CBAL-LearningCurve",
+                getPreprocessing());
+        // computes and stores the kappa values
+        batch.addInnerReport(LearningCurveReport.class);    
+        batch.setParameterSpace(pSpace);
+        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
         batch.addReport(BatchRuntimeReport.class);
 
         // Run
