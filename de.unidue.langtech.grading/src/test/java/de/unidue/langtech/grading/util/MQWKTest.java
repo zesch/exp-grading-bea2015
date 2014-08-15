@@ -130,4 +130,18 @@ public class MQWKTest
 
         assertEquals(0.62454, QuadraticWeightedKappa.getMeanWeightedKappa(new Double[]{0.5,0.8}, new Double[]{1.0,0.5}), EPSILON);
     }
+    
+    @Test
+    public void getKappa() {
+        assertEquals(0.333333, QuadraticWeightedKappa.getKappa(new Integer[]{1,2,3,4}, new Integer[]{2,3,2,3}, 1,2,3,4), EPSILON);
+        assertEquals(0.5, QuadraticWeightedKappa.getKappa(new Integer[]{1,1,2,2}, new Integer[]{1,1,1,2}, 1,2), EPSILON);
+        assertEquals(0.5, QuadraticWeightedKappa.getKappa(new Integer[]{1,1,0,0}, new Integer[]{1,1,1,0}, 0,1), EPSILON);
+        assertEquals(0.5, QuadraticWeightedKappa.getKappa(new Integer[]{1,1,0,0}, new Integer[]{1,0,0,0}, 0,1), EPSILON);
+        assertEquals(0.6, QuadraticWeightedKappa.getKappa(new Integer[]{1,1,0,0,0,0,0,0}, new Integer[]{1,0,0,0,0,0,0,0}, 0,1), EPSILON);
+        assertEquals(0.6, QuadraticWeightedKappa.getKappa(new Integer[]{1,1,2,2,2,2,2,2}, new Integer[]{1,2,2,2,2,2,2,2}, 1,2), EPSILON);
+        assertEquals(0.0, QuadraticWeightedKappa.getKappa(
+        		new Integer[]{1,1,1,1,1,1,1,1,1,1,1,1,1},
+        		new Integer[]{1,2,1,3,1,1,1,1,1,1,1,1,1},
+        		1,2,3), EPSILON);
+    }
 }

@@ -20,6 +20,10 @@ public class QuadraticWeightedKappa
         if (ratingsA.length != ratingsB.length) {
             throw new IllegalArgumentException("Rating vectors need to be of equal size.");
         }
+        
+        if (Arrays.equals(ratingsA,ratingsB)) {
+        	return 1.0;
+        }
     
 //        int minRating = Collections.min(Arrays.asList(categories));
 //        int maxRating = Collections.max(Arrays.asList(categories));
@@ -31,16 +35,19 @@ public class QuadraticWeightedKappa
 
         FrequencyDistribution<Integer> freqDistA = new FrequencyDistribution<Integer>(Arrays.asList(ratingsA));
         FrequencyDistribution<Integer> freqDistB = new FrequencyDistribution<Integer>(Arrays.asList(ratingsB));
-
+        
         double numerator = 0.0;
         double denominator = 0.0;
 
         for (int outerCategory : categories) {
             for (int innerCategory : categories) {
+                int nMinusOne = nrofRatings - 1;
+                int distance = outerCategory - innerCategory;
+                double weight = (double) (distance*distance) / (nMinusOne*nMinusOne);
+                
                 double expectedCount = (double) (freqDistA.getCount(outerCategory) * freqDistB.getCount(innerCategory)) / nrofScoredItems;
-                double d = Math.pow(outerCategory-innerCategory, 2.0) / Math.pow(nrofRatings-1, 2.0);
-                numerator += d * confMatrix.getElement(outerCategory, innerCategory) / nrofScoredItems;
-                denominator += d * expectedCount / nrofScoredItems;
+                numerator += weight * confMatrix.getElement(outerCategory, innerCategory) / nrofScoredItems;
+                denominator += weight * expectedCount / nrofScoredItems;
             }
         }
 

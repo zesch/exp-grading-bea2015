@@ -16,6 +16,7 @@ import org.apache.uima.resource.ResourceInitializationException;
 
 import weka.attributeSelection.InfoGainAttributeEval;
 import weka.attributeSelection.Ranker;
+import weka.classifiers.functions.SMO;
 import weka.clusterers.SimpleKMeans;
 import de.tudarmstadt.ukp.dkpro.core.api.resources.DkproContext;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpDependencyParser;
@@ -38,6 +39,8 @@ import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchRuntimeReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchTrainTestReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
 import de.unidue.langtech.grading.io.RfuReader;
+import de.unidue.langtech.grading.report.KappaReport;
+import de.unidue.langtech.grading.tc.BatchTaskClusterClassification;
 import de.unidue.langtech.grading.tc.BatchTaskClustering;
 
 public class RfuClustering
@@ -56,6 +59,8 @@ public class RfuClustering
     public static final String LANGUAGE_CODE = "en";
 
     public static final Boolean[] toLowerCase = new Boolean[] { true };
+    
+    public static final Boolean[] onlyPure = new Boolean[] { false, true};
           
     public static final String stopwordList = "classpath:/stopwords/english_stopwords.txt";
     
@@ -63,8 +68,8 @@ public class RfuClustering
 
     public static final int NUM_FOLDS = 5;
 
-    public static final boolean useTagger = true;
-    public static final boolean useParsing = true;
+    public static final boolean useTagger = false;
+    public static final boolean useParsing = false;
     public static final boolean useSpellChecking = false;
 
     public static void main(String[] args)
@@ -73,10 +78,13 @@ public class RfuClustering
         File baseDir = new File(new DkproContext().getWorkspace("ETS").getAbsolutePath() + "/RFU");
 
         for (String question : rfuQuestions) {
+        	System.out.println("Q: " + question);
 	        ParameterSpace pSpace = getParameterSpace(baseDir.getAbsolutePath(), question);
 
 	        RfuClustering experiment = new RfuClustering();
-	        experiment.runClustering(pSpace);
+//	        experiment.runClustering(pSpace);
+	        experiment.runClusterClassification(pSpace);
+
         }
     }
     
@@ -100,8 +108,12 @@ public class RfuClustering
                 		RfuReader.PARAM_INPUT_FILE, basedir + "/" + question + "_test.txt"
         ));
 
-        Dimension<List<String>> dimClassificationArgs = Dimension.create(DIM_CLASSIFICATION_ARGS,
+        Dimension<List<String>> dimClusteringArgs = Dimension.create("clusteringArguments",
                 Arrays.asList(new String[] { SimpleKMeans.class.getName(), "-N", "20", })
+        );  
+    
+        Dimension<List<String>> dimClassificationArgs = Dimension.create(DIM_CLASSIFICATION_ARGS,
+                Arrays.asList(new String[] { SMO.class.getName() })
         );
 
         Dimension<List<Object>> dimPipelineParameters = Dimension.create(
@@ -142,7 +154,9 @@ public class RfuClustering
                 Dimension.create(DIM_FEATURE_MODE, FM_DOCUMENT),
                 dimPipelineParameters,
                 dimFeatureSets,
-                dimClassificationArgs
+                dimClassificationArgs,
+                dimClusteringArgs,
+                Dimension.create("onlyPureClusters", onlyPure)
 //                Dimension.createBundle("featureSelection", dimFeatureSelection)
         );
 
@@ -157,6 +171,23 @@ public class RfuClustering
                 getPreprocessing());    
         batch.setParameterSpace(pSpace);
         batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
+        batch.addReport(BatchTrainTestReport.class);
+        batch.addReport(BatchOutcomeIDReport.class);
+        batch.addReport(BatchRuntimeReport.class);
+
+        // Run
+        Lab.getInstance().run(batch);
+    }
+    
+    // ##### CLUSTERING + CLASSIFICATION #####
+    protected void runClusterClassification(ParameterSpace pSpace)
+        throws Exception
+    {
+        BatchTaskClusterClassification batch = new BatchTaskClusterClassification("Powergrading-ClusterClassification",
+                getPreprocessing());    
+        batch.setParameterSpace(pSpace);
+        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
+        batch.addInnerReport(KappaReport.class);
         batch.addReport(BatchTrainTestReport.class);
         batch.addReport(BatchOutcomeIDReport.class);
         batch.addReport(BatchRuntimeReport.class);

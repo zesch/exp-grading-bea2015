@@ -41,6 +41,8 @@ import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskTrainTest;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
 import de.unidue.langtech.grading.io.PowerGradingReader;
 import de.unidue.langtech.grading.report.KappaReport;
+import de.unidue.langtech.grading.report.LearningCurveReport;
+import de.unidue.langtech.grading.tc.BatchTaskLearningCurve;
 
 public class PowergradingBaseline
     implements Constants
@@ -63,7 +65,6 @@ public class PowergradingBaseline
 	public static final Integer[] questionIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 13, 20 };
 
     public static final boolean useTagger = true;
-    public static final boolean useChunker = false;
     public static final boolean useParsing = true;
     public static final boolean useSpellChecking = false;
 
@@ -75,7 +76,8 @@ public class PowergradingBaseline
 
 	        PowergradingBaseline experiment = new PowergradingBaseline();
 //	        experiment.runCrossValidation(pSpace);
-	        experiment.runTrainTest(pSpace);
+//	        experiment.runTrainTest(pSpace);
+	        experiment.runLearningCurve(pSpace);
         }
     }
     
@@ -191,6 +193,22 @@ public class PowergradingBaseline
         Lab.getInstance().run(batch);
     }
     
+    // ##### LEARNING-CURVE #####
+    protected void runLearningCurve(ParameterSpace pSpace)
+        throws Exception
+    {
+        BatchTaskLearningCurve batch = new BatchTaskLearningCurve("Powergrading-LearningCurve",
+                getPreprocessing());
+        // computes and stores the kappa values
+        batch.addInnerReport(LearningCurveReport.class);    
+        batch.setParameterSpace(pSpace);
+        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
+        batch.addReport(BatchRuntimeReport.class);
+
+        // Run
+        Lab.getInstance().run(batch);
+    }
+    
     public static AnalysisEngineDescription getPreprocessing()
         throws ResourceInitializationException
     {
@@ -202,10 +220,7 @@ public class PowergradingBaseline
         
         if (useTagger) {
         	System.out.println("Running tagger ...");
-//            tagger = createEngineDescription(
-//                    TreeTaggerPosLemmaTT4J.class,
-//                    TreeTaggerPosLemmaTT4J.PARAM_LANGUAGE, LANGUAGE_CODE
-//            );
+
             tagger = createEngineDescription(
                     ClearNlpPosTagger.class,
                     ClearNlpPosTagger.PARAM_LANGUAGE, LANGUAGE_CODE
@@ -214,13 +229,6 @@ public class PowergradingBaseline
                     ClearNlpLemmatizer.class
             );
         }
-        
-//        if (useChunker) {
-//            chunker = createEngineDescription(
-//                    TreeTaggerChunkerTT4J.class,
-//                    TreeTaggerChunkerTT4J.PARAM_LANGUAGE, LANGUAGE_CODE
-//            );
-//        }
 
         if (useSpellChecking) {
             spellChecker = createEngineDescription(
@@ -231,10 +239,7 @@ public class PowergradingBaseline
         
         if (useParsing) {
         	System.out.println("Running parser ...");
-//            parser = createEngineDescription(
-//                    StanfordParser.class,
-//                    StanfordParser.PARAM_VARIANT, "pcfg"
-//            );
+
             parser = createEngineDescription(
                     ClearNlpDependencyParser.class,
                     ClearNlpDependencyParser.PARAM_VARIANT, "ontonotes"

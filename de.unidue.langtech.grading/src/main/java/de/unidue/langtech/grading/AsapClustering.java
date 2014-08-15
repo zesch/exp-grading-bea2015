@@ -16,10 +16,6 @@ import org.apache.uima.resource.ResourceInitializationException;
 import weka.attributeSelection.InfoGainAttributeEval;
 import weka.attributeSelection.Ranker;
 import weka.classifiers.functions.SMO;
-import weka.classifiers.functions.supportVector.PolyKernel;
-import weka.classifiers.meta.Bagging;
-import weka.classifiers.trees.J48;
-import weka.classifiers.trees.RandomForest;
 import weka.clusterers.SimpleKMeans;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpDependencyParser;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpLemmatizer;
@@ -36,17 +32,13 @@ import de.tudarmstadt.ukp.dkpro.tc.features.ngram.DependencyDFE;
 import de.tudarmstadt.ukp.dkpro.tc.features.ngram.LuceneCharacterNGramDFE;
 import de.tudarmstadt.ukp.dkpro.tc.features.ngram.LuceneNGramDFE;
 import de.tudarmstadt.ukp.dkpro.tc.features.ngram.LuceneSkipNGramDFE;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchCrossValidationReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchOutcomeIDReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchRuntimeReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchTrainTestReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.FeatureValuesReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskCrossValidation;
-import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskTrainTest;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
 import de.unidue.langtech.grading.io.Asap2Reader;
-import de.unidue.langtech.grading.io.PowerGradingReader;
 import de.unidue.langtech.grading.report.KappaReport;
+import de.unidue.langtech.grading.tc.BatchTaskClusterClassification;
 import de.unidue.langtech.grading.tc.BatchTaskClustering;
 
 public class AsapClustering
@@ -57,6 +49,8 @@ public class AsapClustering
 
     public static final Boolean[] toLowerCase = new Boolean[] { true };
           
+    public static final Boolean[] onlyPure = new Boolean[] { false, true};
+
     public static final String stopwordList = "classpath:/stopwords/english_stopwords.txt";
 //    public static final String stopwordList = "classpath:/stopwords/english_empty.txt";
     
@@ -70,7 +64,6 @@ public class AsapClustering
 	public static final Integer[] essaySetIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 
     public static final boolean useTagger = true;
-    public static final boolean useChunker = false;
     public static final boolean useParsing = true;
     public static final boolean useSpellChecking = false;
 
@@ -81,7 +74,9 @@ public class AsapClustering
 	        ParameterSpace pSpace = getParameterSpace(essaySetId, TRAIN_DATA_ALL, TEST_DATA);
 
 	        AsapClustering experiment = new AsapClustering();
-	        experiment.runClustering(pSpace);
+//	        experiment.runClustering(pSpace);
+	        experiment.runClusterClassification(pSpace);
+
         }
     }
     
@@ -105,9 +100,14 @@ public class AsapClustering
                         Asap2Reader.PARAM_INPUT_FILE, testFile,
                         Asap2Reader.PARAM_ESSAY_SET_ID, essaySetId));
 
+        Dimension<List<String>> dimClusteringArgs = Dimension.create("clusteringArguments",
+                Arrays.asList(new String[] { SimpleKMeans.class.getName(), "-N", "50", })
+        );  
+    
         Dimension<List<String>> dimClassificationArgs = Dimension.create(DIM_CLASSIFICATION_ARGS,
-                Arrays.asList(new String[] { SimpleKMeans.class.getName(), "-N", "10", })
+                Arrays.asList(new String[] { SMO.class.getName() })
         );
+
 
         Dimension<List<Object>> dimPipelineParameters = Dimension.create(
                 DIM_PIPELINE_PARAMS,
@@ -147,7 +147,9 @@ public class AsapClustering
                 Dimension.create(DIM_FEATURE_MODE, FM_DOCUMENT),
                 dimPipelineParameters,
                 dimFeatureSets,
-                dimClassificationArgs
+                dimClassificationArgs,
+                dimClusteringArgs,
+                Dimension.create("onlyPureClusters", onlyPure)
 //                Dimension.createBundle("featureSelection", dimFeatureSelection)
         );
 
@@ -162,6 +164,23 @@ public class AsapClustering
                 getPreprocessing());    
         batch.setParameterSpace(pSpace);
         batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
+        batch.addReport(BatchTrainTestReport.class);
+        batch.addReport(BatchOutcomeIDReport.class);
+        batch.addReport(BatchRuntimeReport.class);
+
+        // Run
+        Lab.getInstance().run(batch);
+    }
+    
+    // ##### CLUSTERING + CLASSIFICATION #####
+    protected void runClusterClassification(ParameterSpace pSpace)
+        throws Exception
+    {
+        BatchTaskClusterClassification batch = new BatchTaskClusterClassification("ASAP-ClusterClassification",
+                getPreprocessing());    
+        batch.setParameterSpace(pSpace);
+        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
+        batch.addInnerReport(KappaReport.class);
         batch.addReport(BatchTrainTestReport.class);
         batch.addReport(BatchOutcomeIDReport.class);
         batch.addReport(BatchRuntimeReport.class);

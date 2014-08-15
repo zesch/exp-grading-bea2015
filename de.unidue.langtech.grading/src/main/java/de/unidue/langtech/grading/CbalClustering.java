@@ -16,6 +16,7 @@ import org.apache.uima.resource.ResourceInitializationException;
 
 import weka.attributeSelection.InfoGainAttributeEval;
 import weka.attributeSelection.Ranker;
+import weka.classifiers.functions.SMO;
 import weka.clusterers.SimpleKMeans;
 import de.tudarmstadt.ukp.dkpro.core.api.resources.DkproContext;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpDependencyParser;
@@ -38,6 +39,8 @@ import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchRuntimeReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchTrainTestReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
 import de.unidue.langtech.grading.io.CbalReader;
+import de.unidue.langtech.grading.report.KappaReport;
+import de.unidue.langtech.grading.tc.BatchTaskClusterClassification;
 import de.unidue.langtech.grading.tc.BatchTaskClustering;
 
 public class CbalClustering
@@ -47,7 +50,9 @@ public class CbalClustering
     public static final String LANGUAGE_CODE = "en";
 
     public static final Boolean[] toLowerCase = new Boolean[] { true };
-          
+              
+    public static final Boolean[] onlyPure = new Boolean[] { false, true};
+
     public static final String stopwordList = "classpath:/stopwords/english_stopwords.txt";
     
     public static final String SPELLING_VOCABULARY = "classpath:/vocabulary/en_US_dict.txt";
@@ -64,10 +69,12 @@ public class CbalClustering
         File baseDir = new File(new DkproContext().getWorkspace("ETS").getAbsolutePath() + "/CBAL");
 
         for (String question : CbalReader.cbalQuestions) {
+        	System.out.println("Q: " + question);
 	        ParameterSpace pSpace = getParameterSpace(baseDir.getAbsolutePath(), question);
 
 	        CbalClustering experiment = new CbalClustering();
-	        experiment.runClustering(pSpace);
+//	        experiment.runClustering(pSpace);
+	        experiment.runClusterClassification(pSpace);
         }
     }
     
@@ -91,8 +98,12 @@ public class CbalClustering
                 		CbalReader.PARAM_INPUT_FILE, basedir + "/" + question + ".test.csv"
         ));
 
+        Dimension<List<String>> dimClusteringArgs = Dimension.create("clusteringArguments",
+                Arrays.asList(new String[] { SimpleKMeans.class.getName(), "-N", "20", })
+        );  
+    
         Dimension<List<String>> dimClassificationArgs = Dimension.create(DIM_CLASSIFICATION_ARGS,
-                Arrays.asList(new String[] { SimpleKMeans.class.getName(), "-N", "10", })
+                Arrays.asList(new String[] { SMO.class.getName() })
         );
 
         Dimension<List<Object>> dimPipelineParameters = Dimension.create(
@@ -133,7 +144,9 @@ public class CbalClustering
                 Dimension.create(DIM_FEATURE_MODE, FM_DOCUMENT),
                 dimPipelineParameters,
                 dimFeatureSets,
-                dimClassificationArgs
+                dimClassificationArgs,
+                dimClusteringArgs,
+                Dimension.create("onlyPureClusters", onlyPure)
 //                Dimension.createBundle("featureSelection", dimFeatureSelection)
         );
 
@@ -148,6 +161,23 @@ public class CbalClustering
                 getPreprocessing());    
         batch.setParameterSpace(pSpace);
         batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
+        batch.addReport(BatchTrainTestReport.class);
+        batch.addReport(BatchOutcomeIDReport.class);
+        batch.addReport(BatchRuntimeReport.class);
+
+        // Run
+        Lab.getInstance().run(batch);
+    }
+    
+    // ##### CLUSTERING + CLASSIFICATION #####
+    protected void runClusterClassification(ParameterSpace pSpace)
+        throws Exception
+    {
+        BatchTaskClusterClassification batch = new BatchTaskClusterClassification("ASAP-ClusterClassification",
+                getPreprocessing());    
+        batch.setParameterSpace(pSpace);
+        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
+        batch.addInnerReport(KappaReport.class);
         batch.addReport(BatchTrainTestReport.class);
         batch.addReport(BatchOutcomeIDReport.class);
         batch.addReport(BatchRuntimeReport.class);

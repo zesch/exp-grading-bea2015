@@ -18,57 +18,55 @@
  */
 package de.unidue.langtech.grading.tc;
 
-import static org.apache.uima.fit.factory.CollectionReaderFactory.createReaderDescription;
-
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.uima.collection.CollectionReaderDescription;
-import org.apache.uima.fit.pipeline.JCasIterable;
-import org.apache.uima.jcas.JCas;
-import org.apache.uima.resource.ResourceInitializationException;
+import java.util.TreeMap;
 
 import weka.clusterers.AbstractClusterer;
 import weka.clusterers.Clusterer;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.core.converters.ConverterUtils.DataSink;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
 import de.tudarmstadt.ukp.dkpro.core.api.frequency.util.ConditionalFrequencyDistribution;
 import de.tudarmstadt.ukp.dkpro.core.api.frequency.util.FrequencyDistribution;
-import de.tudarmstadt.ukp.dkpro.core.api.metadata.type.DocumentMetaData;
-import de.tudarmstadt.ukp.dkpro.core.io.bincas.BinaryCasReader;
 import de.tudarmstadt.ukp.dkpro.lab.engine.TaskContext;
 import de.tudarmstadt.ukp.dkpro.lab.storage.StorageService.AccessMode;
 import de.tudarmstadt.ukp.dkpro.lab.task.Discriminator;
 import de.tudarmstadt.ukp.dkpro.lab.task.impl.ExecutableTaskBase;
 import de.tudarmstadt.ukp.dkpro.tc.core.Constants;
-import de.tudarmstadt.ukp.dkpro.tc.core.feature.AddIdFeatureExtractor;
-import de.tudarmstadt.ukp.dkpro.tc.core.task.PreprocessTask;
 import de.tudarmstadt.ukp.dkpro.tc.weka.util.TaskUtils;
 import de.tudarmstadt.ukp.dkpro.tc.weka.util.WekaUtils;
 
 /**
- * Clusters the training data and outputs some statistics.
+ * Clusters the training data and evaluates on the test data.
  */
-public class ClusteringTask
+public class ClusterTrainTask
     extends ExecutableTaskBase
     implements Constants
 {
+	
+    /**
+     * Public name of the output folder for the new training data
+     */
+    public static final String ADAPTED_TRAINING_DATA = "train.new";
+    
     @Discriminator
     private List<String> clusteringArguments;
     @Discriminator
     private String featureMode;
     @Discriminator
     private String learningMode;
+    @Discriminator
+    private boolean onlyPureClusters;
 
     @Override
     public void execute(TaskContext aContext)
@@ -88,7 +86,7 @@ public class ClusteringTask
         
         // get number of outcomes
 		List<String> trainOutcomeValues = TaskUtils.getClassLabels(trainData, multiLabel);
-
+		
         Clusterer clusterer = AbstractClusterer.forName(clusteringArguments.get(0), clusteringArguments
                 .subList(1, clusteringArguments.size()).toArray(new String[0]));
 
@@ -102,42 +100,61 @@ public class ClusteringTask
 	    Instances clusterTrainData = Filter.useFilter(trainData, filter);
         
         clusterer.buildClusterer(clusterTrainData);
-         
+        
         // get a mapping from clusterIDs to instance offsets in the ARFF
         Map<Integer, Set<Integer>> clusterMap = getClusterMap(clusterTrainData, clusterer);
-
         
-        Map<String, String> instanceId2TextMap = getInstanceId2TextMap(aContext);
+        // get a CFD that stores the number of outcomes for each class indexed by the clusterID
+        ConditionalFrequencyDistribution<Integer, String> clusterCfd = 
+        		getClusterCfd(clusterMap, copyTrainData, trainOutcomeValues);
         
-        ConditionalFrequencyDistribution<Integer,String> clusterAssignments = new ConditionalFrequencyDistribution<Integer,String>();
+        Map<Integer, String> mostFrequentClassPerCluster = new HashMap<Integer, String>();
+        Map<Integer, Double> clusterScoreMap = new HashMap<Integer, Double>();
         for (Integer clusterId : clusterMap.keySet()) {
-        	System.out.println("CLUSTER: " + clusterId);
-        	for (Integer offset : clusterMap.get(clusterId)) {
-        		
-        		// get instance ID from instance
-        		Instance instance = copyTrainData.get(offset);
-        		
-        		Double classOffset = new Double(instance.value(copyTrainData.classAttribute()));
-                String label = (String) trainOutcomeValues.get(classOffset.intValue());
-                
-        		clusterAssignments.addSample(clusterId, label);
-       
-        		String instanceId = instance.stringValue(copyTrainData.attribute(AddIdFeatureExtractor.ID_FEATURE_NAME).index());
-        		System.out.println(label + "\t" + instanceId2TextMap.get(instanceId));
-        	}
-        	System.out.println();
-        }
-        
-        System.out.println("ID\tSIZE\tPURITY\tRMSE");
-        for (Integer clusterId : clusterMap.keySet()) {
-        	FrequencyDistribution<String> fd = clusterAssignments.getFrequencyDistribution(clusterId);
+        	FrequencyDistribution<String> fd = clusterCfd.getFrequencyDistribution(clusterId);
+        	mostFrequentClassPerCluster.put(clusterId, fd.getSampleWithMaxFreq());
+        	
         	double purity = (double) fd.getCount(fd.getSampleWithMaxFreq()) / fd.getN();
-        	String purityString = String.format("%.2f", purity);
-        	double rmse = getRMSE(fd, trainOutcomeValues);
-        	String rmseString = String.format("%.2f", rmse);
-        	System.out.println(clusterId + "\t" + clusterMap.get(clusterId).size() + "\t" + purityString + "\t" + rmseString);
+// attention - cannot simply use RMSE here - as smaller values are better unlike with purity
+//        	double rmse = getRMSE(fd, trainOutcomeValues);
+        	clusterScoreMap.put(clusterId, purity);
         }
-        System.out.println();        
+        
+        // sort clusters by score
+        Map<Integer,Double> sortedClusters = new TreeMap<Integer,Double>(new ValueComparator(clusterScoreMap));
+        sortedClusters.putAll(clusterScoreMap);
+        
+        // change the outcome values of instances according to the most frequent class in its cluster
+        
+        double avgPurity = 0.0;
+        int n = 0;
+        for (Integer clusterId : sortedClusters.keySet()) { 	
+        	if (onlyPureClusters && trainOutcomeValues.size() == 0) {
+        		break;
+        	}
+        	
+        	// do not use clusters of single responses, as they always have purity of 1
+        	if (clusterCfd.getFrequencyDistribution(clusterId).getN() == 1) {
+        		continue;
+        	}
+        	
+        	n++;
+        	avgPurity += clusterScoreMap.get(clusterId);
+        	
+        	
+        	String mostFrequentClass = mostFrequentClassPerCluster.get(clusterId);
+        	trainOutcomeValues.remove(mostFrequentClass);
+        	
+        	for (Integer instanceOffset : clusterMap.get(clusterId)) {
+        		copyTrainData.get(instanceOffset).setValue(copyTrainData.classIndex(), mostFrequentClass);
+        	}
+        }
+        avgPurity = avgPurity / n;
+        System.out.println("Average cluster purity: " + avgPurity);
+        
+        // write the new training data (that will be used by the test task instead of the original one)                
+        DataSink.write(aContext.getStorageLocation(ADAPTED_TRAINING_DATA, AccessMode.READWRITE).getPath()
+                + "/" + ARFF_FILENAME, copyTrainData);
     }
     
     /**
@@ -174,25 +191,45 @@ public class ClusteringTask
         
         return clusterMap;
     }
-    private Map<String, String> getInstanceId2TextMap(TaskContext aContext)
-    		throws ResourceInitializationException
-    {	
-        Map<String, String> instanceId2TextMap = new HashMap<String,String>();
+    
+    private ConditionalFrequencyDistribution<Integer,String> getClusterCfd(Map<Integer, Set<Integer>> clusterMap, Instances data, List<String> outcomeValues) {
+        ConditionalFrequencyDistribution<Integer,String> clusterAssignments = new ConditionalFrequencyDistribution<Integer,String>();
 
-        // TrainTest setup: input files are set as imports
-        File root = aContext.getStorageLocation(PreprocessTask.OUTPUT_KEY_TRAIN, AccessMode.READONLY);
-        Collection<File> files = FileUtils.listFiles(root, new String[] { "bin" }, true);
-        CollectionReaderDescription reader = createReaderDescription(BinaryCasReader.class, BinaryCasReader.PARAM_PATTERNS,
-                files);
-        
-        for (JCas jcas : new JCasIterable(reader)) {
-        	DocumentMetaData dmd = DocumentMetaData.get(jcas);
-        	instanceId2TextMap.put(dmd.getDocumentId(), jcas.getDocumentText());
+    	for (Integer clusterId : clusterMap.keySet()) {
+        	for (Integer offset : clusterMap.get(clusterId)) {
+        		
+        		// get instance ID from instance
+        		Instance instance = data.get(offset);
+        		
+        		Double classOffset = new Double(instance.value(data.classAttribute()));
+                String label = outcomeValues.get(classOffset.intValue());
+                
+        		clusterAssignments.addSample(clusterId, label);       
+        	}
         }
-        
-        return instanceId2TextMap;
+    	
+    	return clusterAssignments;
     }
     
+//    private Map<String, String> getInstanceId2TextMap(TaskContext aContext)
+//    		throws ResourceInitializationException
+//    {	
+//        Map<String, String> instanceId2TextMap = new HashMap<String,String>();
+//
+//        // TrainTest setup: input files are set as imports
+//        File root = aContext.getStorageLocation(PreprocessTask.OUTPUT_KEY_TRAIN, AccessMode.READONLY);
+//        Collection<File> files = FileUtils.listFiles(root, new String[] { "bin" }, true);
+//        CollectionReaderDescription reader = createReaderDescription(BinaryCasReader.class, BinaryCasReader.PARAM_PATTERNS,
+//                files);
+//        
+//        for (JCas jcas : new JCasIterable(reader)) {
+//        	DocumentMetaData dmd = DocumentMetaData.get(jcas);
+//        	instanceId2TextMap.put(dmd.getDocumentId(), jcas.getDocumentText());
+//        }
+//        
+//        return instanceId2TextMap;
+//    }
+//    
 //    private double getKappa(FrequencyDistribution<String> fd, List<String> outcomeStrings) {
 //    	Integer[] outcomeValues = new Integer[outcomeStrings.size()];
 //    	for (int i=0; i<outcomeStrings.size(); i++) {
@@ -235,4 +272,26 @@ public class ClusteringTask
     	
     	return rmse;
     }
+    
+    class ValueComparator
+	    implements Comparator<Integer>
+	{
+	    Map<Integer,Double> base;
+	
+	    public ValueComparator(Map<Integer,Double> base)
+	    {
+	        this.base = base;
+	    }
+	
+	    public int compare(Integer a, Integer b)
+	    {
+	
+	        if (base.get(a) < base.get(b)) {
+	            return 1;
+	        }
+	        else {
+	            return -1;
+	        }
+	    }
+	}
 }

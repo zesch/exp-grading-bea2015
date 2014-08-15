@@ -1,7 +1,7 @@
 /**
  * Copyright 2014
- * Language Technology Lab
- * University of Duisburg-Essen
+ * Ubiquitous Knowledge Processing (UKP) Lab
+ * Technische Universität Darmstadt
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,15 +30,13 @@ import de.tudarmstadt.ukp.dkpro.tc.core.task.ExtractFeaturesTask;
 import de.tudarmstadt.ukp.dkpro.tc.core.task.MetaInfoTask;
 import de.tudarmstadt.ukp.dkpro.tc.core.task.PreprocessTask;
 import de.tudarmstadt.ukp.dkpro.tc.core.task.ValidityCheckTask;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.ClassificationReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.report.OutcomeIDReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.task.TestTask;
 
 /**
- * Clustering setup
+ * Automatic learning curve experiments
  * 
  */
-public class BatchTaskClustering
+public class BatchTaskLearningCurve
     extends BatchTask
 {
 
@@ -53,9 +51,9 @@ public class BatchTaskClustering
     private MetaInfoTask metaTask;
     private ExtractFeaturesTask featuresTrainTask;
     private ExtractFeaturesTask featuresTestTask;
-    private ClusteringTask clusteringTask;
+    private LearningCurveTask testTask;
 
-    public BatchTaskClustering()
+    public BatchTaskLearningCurve()
     {/* needed for Groovy */
     }
 
@@ -67,7 +65,7 @@ public class BatchTaskClustering
      * @param preprocessingPipeline
      *            preprocessing analysis engine aggregate
      */
-    public BatchTaskClustering(String aExperimentName,
+    public BatchTaskLearningCurve(String aExperimentName,
             AnalysisEngineDescription preprocessingPipeline)
     {
         setExperimentName(aExperimentName);
@@ -125,6 +123,7 @@ public class BatchTaskClustering
         metaTask = new MetaInfoTask();
         metaTask.setOperativeViews(operativeViews);
         metaTask.setType(metaTask.getType() + "-" + experimentName);
+
         metaTask.addImport(preprocessTaskTrain, PreprocessTask.OUTPUT_KEY_TRAIN,
                 MetaInfoTask.INPUT_KEY);
 
@@ -143,18 +142,19 @@ public class BatchTaskClustering
                 ExtractFeaturesTask.INPUT_KEY);
 
         // test task operating on the models of the feature extraction train and test tasks
-        clusteringTask = new ClusteringTask();
-        clusteringTask.setType(clusteringTask.getType() + "-" + experimentName);
-        clusteringTask.addImport(preprocessTaskTrain, PreprocessTask.OUTPUT_KEY_TRAIN);
-        
+        testTask = new LearningCurveTask();
+        testTask.setType(testTask.getType() + "-" + experimentName);
+
         if (innerReports != null) {
             for (Class<? extends Report> report : innerReports) {
-            	clusteringTask.addReport(report);
+                testTask.addReport(report);
             }
         }
 
-        clusteringTask.addImport(featuresTrainTask, ExtractFeaturesTask.OUTPUT_KEY,
-                TestTask.TEST_TASK_INPUT_KEY_TRAINING_DATA);
+        testTask.addImport(featuresTrainTask, ExtractFeaturesTask.OUTPUT_KEY,
+                LearningCurveTask.TEST_TASK_INPUT_KEY_TRAINING_DATA);
+        testTask.addImport(featuresTestTask, ExtractFeaturesTask.OUTPUT_KEY,
+        		LearningCurveTask.TEST_TASK_INPUT_KEY_TEST_DATA);
 
         // DKPro Lab issue 38: must be added as *first* task
         addTask(checkTask);
@@ -163,7 +163,7 @@ public class BatchTaskClustering
         addTask(metaTask);
         addTask(featuresTrainTask);
         addTask(featuresTestTask);
-        addTask(clusteringTask);
+        addTask(testTask);
     }
 
     public void setExperimentName(String experimentName)

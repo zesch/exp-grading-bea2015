@@ -38,7 +38,7 @@ import de.tudarmstadt.ukp.dkpro.tc.weka.task.TestTask;
  * Clustering setup
  * 
  */
-public class BatchTaskClustering
+public class BatchTaskClusterClassification
     extends BatchTask
 {
 
@@ -53,9 +53,11 @@ public class BatchTaskClustering
     private MetaInfoTask metaTask;
     private ExtractFeaturesTask featuresTrainTask;
     private ExtractFeaturesTask featuresTestTask;
-    private ClusteringTask clusteringTask;
+    private ClusterTrainTask clusteringTask;
+    private TestTask testTask;
 
-    public BatchTaskClustering()
+
+    public BatchTaskClusterClassification()
     {/* needed for Groovy */
     }
 
@@ -67,7 +69,7 @@ public class BatchTaskClustering
      * @param preprocessingPipeline
      *            preprocessing analysis engine aggregate
      */
-    public BatchTaskClustering(String aExperimentName,
+    public BatchTaskClusterClassification(String aExperimentName,
             AnalysisEngineDescription preprocessingPipeline)
     {
         setExperimentName(aExperimentName);
@@ -143,19 +145,33 @@ public class BatchTaskClustering
                 ExtractFeaturesTask.INPUT_KEY);
 
         // test task operating on the models of the feature extraction train and test tasks
-        clusteringTask = new ClusteringTask();
+        clusteringTask = new ClusterTrainTask();
         clusteringTask.setType(clusteringTask.getType() + "-" + experimentName);
         clusteringTask.addImport(preprocessTaskTrain, PreprocessTask.OUTPUT_KEY_TRAIN);
-        
-        if (innerReports != null) {
-            for (Class<? extends Report> report : innerReports) {
-            	clusteringTask.addReport(report);
-            }
-        }
-
         clusteringTask.addImport(featuresTrainTask, ExtractFeaturesTask.OUTPUT_KEY,
                 TestTask.TEST_TASK_INPUT_KEY_TRAINING_DATA);
 
+        // test task operating on the models of the feature extraction train and test tasks
+        testTask = new TestTask();
+        testTask.setType(testTask.getType() + "-" + experimentName);
+
+        if (innerReports != null) {
+            for (Class<? extends Report> report : innerReports) {
+                testTask.addReport(report);
+            }
+        }
+        else {
+            // add default report
+            testTask.addReport(ClassificationReport.class);
+        }
+        // always add OutcomeIdReport
+        testTask.addReport(OutcomeIDReport.class);
+        
+        testTask.addImport(clusteringTask, ClusterTrainTask.ADAPTED_TRAINING_DATA,
+                TestTask.TEST_TASK_INPUT_KEY_TRAINING_DATA);
+        testTask.addImport(featuresTestTask, ExtractFeaturesTask.OUTPUT_KEY,
+                TestTask.TEST_TASK_INPUT_KEY_TEST_DATA);
+        
         // DKPro Lab issue 38: must be added as *first* task
         addTask(checkTask);
         addTask(preprocessTaskTrain);
@@ -164,6 +180,7 @@ public class BatchTaskClustering
         addTask(featuresTrainTask);
         addTask(featuresTestTask);
         addTask(clusteringTask);
+        addTask(testTask);
     }
 
     public void setExperimentName(String experimentName)

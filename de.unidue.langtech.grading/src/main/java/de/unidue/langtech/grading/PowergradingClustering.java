@@ -15,6 +15,7 @@ import org.apache.uima.resource.ResourceInitializationException;
 
 import weka.attributeSelection.InfoGainAttributeEval;
 import weka.attributeSelection.Ranker;
+import weka.classifiers.functions.SMO;
 import weka.clusterers.SimpleKMeans;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpDependencyParser;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpLemmatizer;
@@ -36,6 +37,8 @@ import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchRuntimeReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchTrainTestReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
 import de.unidue.langtech.grading.io.PowerGradingReader;
+import de.unidue.langtech.grading.report.KappaReport;
+import de.unidue.langtech.grading.tc.BatchTaskClusterClassification;
 import de.unidue.langtech.grading.tc.BatchTaskClustering;
 
 public class PowergradingClustering
@@ -45,6 +48,8 @@ public class PowergradingClustering
     public static final String LANGUAGE_CODE = "en";
 
     public static final Boolean[] toLowerCase = new Boolean[] { true };
+    
+    public static final Boolean[] onlyPure = new Boolean[] { false, true};
           
     public static final String stopwordList = "classpath:/stopwords/english_stopwords.txt";
 //    public static final String stopwordList = "classpath:/stopwords/english_empty.txt";
@@ -66,10 +71,13 @@ public class PowergradingClustering
         throws Exception
     {
         for (int questionId : questionIds) {
+        	System.out.println("Q: " + questionId);
+
 	        ParameterSpace pSpace = getParameterSpace(questionId, TRAIN_DATA_ALL, TEST_DATA_ALL);
 
 	        PowergradingClustering experiment = new PowergradingClustering();
-	        experiment.runClustering(pSpace);
+//	        experiment.runClustering(pSpace);
+	        experiment.runClusterClassification(pSpace);
         }
     }
     
@@ -93,8 +101,12 @@ public class PowergradingClustering
                 		PowerGradingReader.PARAM_INPUT_FILE, testFile,
                 		PowerGradingReader.PARAM_QUESTION_ID, questionId));
 
-        Dimension<List<String>> dimClassificationArgs = Dimension.create(DIM_CLASSIFICATION_ARGS,
+        Dimension<List<String>> dimClusteringArgs = Dimension.create("clusteringArguments",
                 Arrays.asList(new String[] { SimpleKMeans.class.getName(), "-N", "10", })
+        );  
+    
+        Dimension<List<String>> dimClassificationArgs = Dimension.create(DIM_CLASSIFICATION_ARGS,
+                Arrays.asList(new String[] { SMO.class.getName() })
         );  
       
         Dimension<List<Object>> dimPipelineParameters = Dimension.create(
@@ -135,7 +147,9 @@ public class PowergradingClustering
                 Dimension.create(DIM_FEATURE_MODE, FM_DOCUMENT),
                 dimPipelineParameters,
                 dimFeatureSets,
-                dimClassificationArgs
+                dimClassificationArgs,
+                dimClusteringArgs,
+                Dimension.create("onlyPureClusters", onlyPure)
 //                Dimension.createBundle("featureSelection", dimFeatureSelection)
         );
 
@@ -158,6 +172,23 @@ public class PowergradingClustering
         Lab.getInstance().run(batch);
     }
     
+    // ##### CLUSTERING + CLASSIFICATION #####
+    protected void runClusterClassification(ParameterSpace pSpace)
+        throws Exception
+    {
+        BatchTaskClusterClassification batch = new BatchTaskClusterClassification("Powergrading-ClusterClassification",
+                getPreprocessing());    
+        batch.setParameterSpace(pSpace);
+        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
+        batch.addInnerReport(KappaReport.class);
+        batch.addReport(BatchTrainTestReport.class);
+        batch.addReport(BatchOutcomeIDReport.class);
+        batch.addReport(BatchRuntimeReport.class);
+
+        // Run
+        Lab.getInstance().run(batch);
+    }
+    
     public static AnalysisEngineDescription getPreprocessing()
         throws ResourceInitializationException
     {
@@ -169,10 +200,6 @@ public class PowergradingClustering
         
         if (useTagger) {
         	System.out.println("Running tagger ...");
-//            tagger = createEngineDescription(
-//                    TreeTaggerPosLemmaTT4J.class,
-//                    TreeTaggerPosLemmaTT4J.PARAM_LANGUAGE, LANGUAGE_CODE
-//            );
             tagger = createEngineDescription(
                     ClearNlpPosTagger.class,
                     ClearNlpPosTagger.PARAM_LANGUAGE, LANGUAGE_CODE
@@ -181,13 +208,6 @@ public class PowergradingClustering
                     ClearNlpLemmatizer.class
             );
         }
-        
-//        if (useChunker) {
-//            chunker = createEngineDescription(
-//                    TreeTaggerChunkerTT4J.class,
-//                    TreeTaggerChunkerTT4J.PARAM_LANGUAGE, LANGUAGE_CODE
-//            );
-//        }
 
         if (useSpellChecking) {
             spellChecker = createEngineDescription(
@@ -198,10 +218,6 @@ public class PowergradingClustering
         
         if (useParsing) {
         	System.out.println("Running parser ...");
-//            parser = createEngineDescription(
-//                    StanfordParser.class,
-//                    StanfordParser.PARAM_VARIANT, "pcfg"
-//            );
             parser = createEngineDescription(
                     ClearNlpDependencyParser.class,
                     ClearNlpDependencyParser.PARAM_VARIANT, "ontonotes"
