@@ -153,7 +153,7 @@ public class DatasetStatistics
     private static void runPowergradingProcessing()
     		throws ResourceInitializationException, UIMAException, IOException
     {
-        for (int questionId : PowergradingBaseline.powergradingQuestionIds) {
+        for (int questionId : PowerGradingReader.questionIds) {
         	SimplePipeline.runPipeline(
         			CollectionReaderFactory.createReader(
 	        			PowerGradingReader.class,
@@ -176,7 +176,7 @@ public class DatasetStatistics
     {
         File baseDir = new File(new DkproContext().getWorkspace("ETS").getAbsolutePath() + "/RFU");
 
-        for (String question : RfuBaseline.rfuQuestions) {
+        for (String question : RfuReader.rfuQuestions) {
         	SimplePipeline.runPipeline(
         			CollectionReaderFactory.createReader(
 	        			RfuReader.class,

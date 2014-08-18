@@ -50,15 +50,7 @@ public class RfuBaseline
     implements Constants
 {
 	
-    public static final String[] rfuQuestions = new String[] {
-//    	"harlem_paraphrase",
-    	"harlem_synopsis",
-    	"immigration_door",
-//    	"immigration_paraphrase",
-    	"immigration_synopsis",
-    	"immigration_traveling"
-    };
-	
+
     public static final String LANGUAGE_CODE = "en";
 
     public static final Boolean[] toLowerCase = new Boolean[] { true };
@@ -79,7 +71,7 @@ public class RfuBaseline
     {
         File baseDir = new File(new DkproContext().getWorkspace("ETS").getAbsolutePath() + "/RFU");
 
-        for (String question : rfuQuestions) {
+        for (String question : RfuReader.rfuQuestions) {
 	        ParameterSpace pSpace = getParameterSpace(baseDir.getAbsolutePath(), question);
 
 	        RfuBaseline experiment = new RfuBaseline();

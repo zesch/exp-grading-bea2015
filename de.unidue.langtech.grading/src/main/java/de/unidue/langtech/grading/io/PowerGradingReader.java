@@ -33,6 +33,8 @@ public class PowerGradingReader
     extends JCasCollectionReader_ImplBase
 {
     
+	public static final Integer[] questionIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 13, 20 };
+
     protected static final String DEFAULT_LANGUAGE = "en";
     
     public static final String PARAM_INPUT_FILE = "InputFile";

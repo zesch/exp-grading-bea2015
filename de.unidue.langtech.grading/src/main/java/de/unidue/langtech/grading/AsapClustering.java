@@ -61,8 +61,6 @@ public class AsapClustering
     public static final String TRAIN_DATA_ALL        = "classpath:/asap/train.tsv";
     public static final String TEST_DATA             = "classpath:/asap/test_public.txt";
 
-	public static final Integer[] essaySetIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-
     public static final boolean useTagger = true;
     public static final boolean useParsing = true;
     public static final boolean useSpellChecking = false;
@@ -70,7 +68,7 @@ public class AsapClustering
     public static void main(String[] args)
         throws Exception
     {
-        for (int essaySetId : essaySetIds) {
+        for (int essaySetId : Asap2Reader.essaySetIds) {
 	        ParameterSpace pSpace = getParameterSpace(essaySetId, TRAIN_DATA_ALL, TEST_DATA);
 
 	        AsapClustering experiment = new AsapClustering();

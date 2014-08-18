@@ -24,6 +24,15 @@ import de.tudarmstadt.ukp.dkpro.tc.api.type.TextClassificationOutcome;
 public class RfuReader
     extends JCasCollectionReader_ImplBase
 {
+    public static final String[] rfuQuestions = new String[] {
+//    	"harlem_paraphrase",
+    	"harlem_synopsis",
+    	"immigration_door",
+//    	"immigration_paraphrase",
+    	"immigration_synopsis",
+    	"immigration_traveling"
+    };
+	
     protected static final String DEFAULT_LANGUAGE = "en";
     
     public static final String PARAM_INPUT_FILE = "InputFile";

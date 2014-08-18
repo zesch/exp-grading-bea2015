@@ -63,8 +63,6 @@ public class AsapBaseline
     public static final String TRAIN_DATA_CONSISTENT = "classpath:/asap/train_consistent_items.tsv";
     public static final String TEST_DATA             = "classpath:/asap/test_public.txt";
 
-	public static final Integer[] essaySetIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-
     public static final boolean useTagger = true;
     public static final boolean useChunker = false;
     public static final boolean useParsing = true;
@@ -73,7 +71,7 @@ public class AsapBaseline
     public static void main(String[] args)
         throws Exception
     {
-        for (int essaySetId : essaySetIds) {
+        for (int essaySetId : Asap2Reader.essaySetIds) {
 	        ParameterSpace pSpace = getParameterSpace(essaySetId, TRAIN_DATA_ALL, TEST_DATA);
 //	        ParameterSpace pSpace = getParameterSpace(essaySetId, TRAIN_DATA_CONSISTENT, TEST_DATA);
 

@@ -47,15 +47,6 @@ public class RfuClustering
     implements Constants
 {
 	
-    public static final String[] rfuQuestions = new String[] {
-    	"harlem_paraphrase",
-    	"harlem_synopsis",
-    	"immigration_door",
-    	"immigration_paraphrase",
-    	"immigration_synopsis",
-    	"immigration_traveling"
-    };
-	
     public static final String LANGUAGE_CODE = "en";
 
     public static final Boolean[] toLowerCase = new Boolean[] { true };
@@ -77,7 +68,7 @@ public class RfuClustering
     {
         File baseDir = new File(new DkproContext().getWorkspace("ETS").getAbsolutePath() + "/RFU");
 
-        for (String question : rfuQuestions) {
+        for (String question : RfuReader.rfuQuestions) {
         	System.out.println("Q: " + question);
 	        ParameterSpace pSpace = getParameterSpace(baseDir.getAbsolutePath(), question);
 
@@ -109,7 +100,7 @@ public class RfuClustering
         ));
 
         Dimension<List<String>> dimClusteringArgs = Dimension.create("clusteringArguments",
-                Arrays.asList(new String[] { SimpleKMeans.class.getName(), "-N", "20", })
+                Arrays.asList(new String[] { SimpleKMeans.class.getName(), "-N", "50", })
         );  
     
         Dimension<List<String>> dimClassificationArgs = Dimension.create(DIM_CLASSIFICATION_ARGS,

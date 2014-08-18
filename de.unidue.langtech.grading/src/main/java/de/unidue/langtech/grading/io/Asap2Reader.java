@@ -12,7 +12,8 @@ import de.tudarmstadt.ukp.dkpro.tc.api.type.TextClassificationOutcome;
 public class Asap2Reader
     extends Asap2Reader_ImplBase
 {
- 
+	public static final Integer[] essaySetIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
     @Override
     public boolean hasNext()
         throws IOException 
