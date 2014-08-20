@@ -7,22 +7,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import de.tudarmstadt.ukp.dkpro.core.api.resources.DkproContext;
-import de.tudarmstadt.ukp.dkpro.lab.Lab;
 import de.tudarmstadt.ukp.dkpro.lab.task.Dimension;
 import de.tudarmstadt.ukp.dkpro.lab.task.ParameterSpace;
-import de.tudarmstadt.ukp.dkpro.lab.task.impl.BatchTask.ExecutionPolicy;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchCrossValidationReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchOutcomeIDReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchRuntimeReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchTrainTestReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.FeatureValuesReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskCrossValidation;
-import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskTrainTest;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
 import de.unidue.langtech.grading.io.CbalReader;
-import de.unidue.langtech.grading.report.KappaReport;
-import de.unidue.langtech.grading.report.LearningCurveReport;
-import de.unidue.langtech.grading.tc.BatchTaskLearningCurve;
 
 public class CbalBaseline
     extends ExperimentsBase
@@ -37,9 +25,9 @@ public class CbalBaseline
 	        ParameterSpace pSpace = getParameterSpace(baseDir.getAbsolutePath(), question);
 
 	        CbalBaseline experiment = new CbalBaseline();
-//	        experiment.runCrossValidation(pSpace);
-//	        experiment.runTrainTest(pSpace);
-	        experiment.runLearningCurve(pSpace);
+//	        experiment.runCrossValidation(pSpace, "CBAL");
+//	        experiment.runTrainTest(pSpace, "CBAL");
+	        experiment.runLearningCurve(pSpace, "CBAL");
         }
     }
     
@@ -74,62 +62,5 @@ public class CbalBaseline
         );
 
         return pSpace;
-    }
-
-    // ##### CV #####
-    protected void runCrossValidation(ParameterSpace pSpace)
-        throws Exception
-    {
-        BatchTaskCrossValidation batch = new BatchTaskCrossValidation("CBAL-CV",
-                getPreprocessing(), NUM_FOLDS);
-        // adds a report to TestTask which creates a report about average feature values for
-        // each outcome label
-        batch.addInnerReport(FeatureValuesReport.class);
-        // computes and stores the kappa values
-        batch.addInnerReport(KappaReport.class);
-        batch.setParameterSpace(pSpace);
-        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
-        batch.addReport(BatchCrossValidationReport.class);
-        batch.addReport(BatchRuntimeReport.class);
-
-        // Run
-        Lab.getInstance().run(batch);
-    }
-
-    // ##### TRAIN-TEST #####
-    protected void runTrainTest(ParameterSpace pSpace)
-        throws Exception
-    {
-        BatchTaskTrainTest batch = new BatchTaskTrainTest("CBAL-TrainTest",
-                getPreprocessing());
-        // adds a report to TestTask which creates a report about average feature values for
-        // each outcome label
-        batch.addInnerReport(FeatureValuesReport.class);
-        // computes and stores the kappa values
-        batch.addInnerReport(KappaReport.class);    
-        batch.setParameterSpace(pSpace);
-        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
-        batch.addReport(BatchTrainTestReport.class);
-        batch.addReport(BatchOutcomeIDReport.class);
-        batch.addReport(BatchRuntimeReport.class);
-
-        // Run
-        Lab.getInstance().run(batch);
-    }
-    
-    // ##### LEARNING-CURVE #####
-    protected void runLearningCurve(ParameterSpace pSpace)
-        throws Exception
-    {
-        BatchTaskLearningCurve batch = new BatchTaskLearningCurve("CBAL-LearningCurve",
-                getPreprocessing());
-        // computes and stores the kappa values
-        batch.addInnerReport(LearningCurveReport.class);    
-        batch.setParameterSpace(pSpace);
-        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
-        batch.addReport(BatchRuntimeReport.class);
-
-        // Run
-        Lab.getInstance().run(batch);
     }
 }

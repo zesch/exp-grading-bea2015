@@ -20,13 +20,28 @@ import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpLemmatizer;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpPosTagger;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpSegmenter;
 import de.tudarmstadt.ukp.dkpro.core.jazzy.SpellChecker;
+import de.tudarmstadt.ukp.dkpro.lab.Lab;
 import de.tudarmstadt.ukp.dkpro.lab.task.Dimension;
+import de.tudarmstadt.ukp.dkpro.lab.task.ParameterSpace;
+import de.tudarmstadt.ukp.dkpro.lab.task.impl.BatchTask.ExecutionPolicy;
 import de.tudarmstadt.ukp.dkpro.tc.core.Constants;
 import de.tudarmstadt.ukp.dkpro.tc.features.length.NrOfTokensDFE;
 import de.tudarmstadt.ukp.dkpro.tc.features.ngram.DependencyDFE;
 import de.tudarmstadt.ukp.dkpro.tc.features.ngram.LuceneCharacterNGramDFE;
 import de.tudarmstadt.ukp.dkpro.tc.features.ngram.LuceneNGramDFE;
 import de.tudarmstadt.ukp.dkpro.tc.features.ngram.LuceneSkipNGramDFE;
+import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchCrossValidationReport;
+import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchOutcomeIDReport;
+import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchRuntimeReport;
+import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchTrainTestReport;
+import de.tudarmstadt.ukp.dkpro.tc.weka.report.FeatureValuesReport;
+import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskCrossValidation;
+import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskTrainTest;
+import de.unidue.langtech.grading.report.KappaReport;
+import de.unidue.langtech.grading.report.LearningCurveReport;
+import de.unidue.langtech.grading.tc.BatchTaskClusterClassification;
+import de.unidue.langtech.grading.tc.BatchTaskClustering;
+import de.unidue.langtech.grading.tc.BatchTaskLearningCurve;
 
 public abstract class ExperimentsBase
 	implements Constants
@@ -110,57 +125,148 @@ public abstract class ExperimentsBase
 
 	
     public static AnalysisEngineDescription getPreprocessing()
-            throws ResourceInitializationException
-        {
-            AnalysisEngineDescription tagger       = createEngineDescription(NoOpAnnotator.class);
-            AnalysisEngineDescription lemmatizer   = createEngineDescription(NoOpAnnotator.class);
-            AnalysisEngineDescription chunker      = createEngineDescription(NoOpAnnotator.class);
-            AnalysisEngineDescription spellChecker = createEngineDescription(NoOpAnnotator.class);
-            AnalysisEngineDescription parser       = createEngineDescription(NoOpAnnotator.class);
-            
-            if (useTagger) {
-            	System.out.println("Running tagger ...");
+        throws ResourceInitializationException
+    {
+        AnalysisEngineDescription tagger       = createEngineDescription(NoOpAnnotator.class);
+        AnalysisEngineDescription lemmatizer   = createEngineDescription(NoOpAnnotator.class);
+        AnalysisEngineDescription chunker      = createEngineDescription(NoOpAnnotator.class);
+        AnalysisEngineDescription spellChecker = createEngineDescription(NoOpAnnotator.class);
+        AnalysisEngineDescription parser       = createEngineDescription(NoOpAnnotator.class);
+        
+        if (useTagger) {
+        	System.out.println("Running tagger ...");
 //                tagger = createEngineDescription(
 //                        TreeTaggerPosLemmaTT4J.class,
 //                        TreeTaggerPosLemmaTT4J.PARAM_LANGUAGE, LANGUAGE_CODE
 //                );
-                tagger = createEngineDescription(
-                        ClearNlpPosTagger.class,
-                        ClearNlpPosTagger.PARAM_LANGUAGE, LANGUAGE_CODE
-                );
-                lemmatizer = createEngineDescription(
-                        ClearNlpLemmatizer.class
-                );
-            }
+            tagger = createEngineDescription(
+                    ClearNlpPosTagger.class,
+                    ClearNlpPosTagger.PARAM_LANGUAGE, LANGUAGE_CODE
+            );
+            lemmatizer = createEngineDescription(
+                    ClearNlpLemmatizer.class
+            );
+        }
 
-            if (useSpellChecking) {
-                spellChecker = createEngineDescription(
-                		SpellChecker.class,
-                		SpellChecker.PARAM_MODEL_LOCATION, SPELLING_VOCABULARY
-                );
-            }
-            
-            if (useParsing) {
-            	System.out.println("Running parser ...");
+        if (useSpellChecking) {
+            spellChecker = createEngineDescription(
+            		SpellChecker.class,
+            		SpellChecker.PARAM_MODEL_LOCATION, SPELLING_VOCABULARY
+            );
+        }
+        
+        if (useParsing) {
+        	System.out.println("Running parser ...");
 //                parser = createEngineDescription(
 //                        StanfordParser.class,
 //                        StanfordParser.PARAM_VARIANT, "pcfg"
 //                );
-                parser = createEngineDescription(
-                        ClearNlpDependencyParser.class,
-                        ClearNlpDependencyParser.PARAM_VARIANT, "ontonotes"
-                );
-            }
-            
-            return createEngineDescription(
-                    createEngineDescription(
-                            ClearNlpSegmenter.class
-                    ),
-                    spellChecker,
-                    tagger,
-                    lemmatizer,
-                    chunker,
-                    parser
+            parser = createEngineDescription(
+                    ClearNlpDependencyParser.class,
+                    ClearNlpDependencyParser.PARAM_VARIANT, "ontonotes"
             );
         }
+        
+        return createEngineDescription(
+                createEngineDescription(
+                        ClearNlpSegmenter.class
+                ),
+                spellChecker,
+                tagger,
+                lemmatizer,
+                chunker,
+                parser
+        );
+    }
+    
+    // ##### CV #####
+    protected void runCrossValidation(ParameterSpace pSpace, String name)
+        throws Exception
+    {
+        BatchTaskCrossValidation batch = new BatchTaskCrossValidation(name + "-CV",
+                getPreprocessing(), NUM_FOLDS);
+        // adds a report to TestTask which creates a report about average feature values for
+        // each outcome label
+        batch.addInnerReport(FeatureValuesReport.class);
+        // computes and stores the kappa values
+        batch.addInnerReport(KappaReport.class);
+        batch.setParameterSpace(pSpace);
+        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
+        batch.addReport(BatchCrossValidationReport.class);
+        batch.addReport(BatchRuntimeReport.class);
+
+        // Run
+        Lab.getInstance().run(batch);
+    }
+
+    // ##### TRAIN-TEST #####
+    protected void runTrainTest(ParameterSpace pSpace, String name)
+        throws Exception
+    {
+        BatchTaskTrainTest batch = new BatchTaskTrainTest(name + "-TrainTest",
+                getPreprocessing());
+        // adds a report to TestTask which creates a report about average feature values for
+        // each outcome label
+        batch.addInnerReport(FeatureValuesReport.class);
+        // computes and stores the kappa values
+        batch.addInnerReport(KappaReport.class);    
+        batch.setParameterSpace(pSpace);
+        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
+        batch.addReport(BatchTrainTestReport.class);
+        batch.addReport(BatchOutcomeIDReport.class);
+        batch.addReport(BatchRuntimeReport.class);
+
+        // Run
+        Lab.getInstance().run(batch);
+    }
+    
+    // ##### LEARNING-CURVE #####
+    protected void runLearningCurve(ParameterSpace pSpace, String name)
+        throws Exception
+    {
+        BatchTaskLearningCurve batch = new BatchTaskLearningCurve(name + "-LearningCurve",
+                getPreprocessing());
+        // computes and stores the kappa values
+        batch.addInnerReport(LearningCurveReport.class);    
+        batch.setParameterSpace(pSpace);
+        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
+        batch.addReport(BatchRuntimeReport.class);
+
+        // Run
+        Lab.getInstance().run(batch);
+    }
+    
+
+    // ##### CLUSTERING #####
+    protected void runClustering(ParameterSpace pSpace, String name)
+        throws Exception
+    {
+        BatchTaskClustering batch = new BatchTaskClustering(name + "-Clustering",
+                getPreprocessing());    
+        batch.setParameterSpace(pSpace);
+        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
+        batch.addReport(BatchTrainTestReport.class);
+        batch.addReport(BatchOutcomeIDReport.class);
+        batch.addReport(BatchRuntimeReport.class);
+
+        // Run
+        Lab.getInstance().run(batch);
+    }
+    
+    // ##### CLUSTERING + CLASSIFICATION #####
+    protected void runClusterClassification(ParameterSpace pSpace, String name)
+        throws Exception
+    {
+        BatchTaskClusterClassification batch = new BatchTaskClusterClassification(name + "-ClusterClassification",
+                getPreprocessing());    
+        batch.setParameterSpace(pSpace);
+        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
+        batch.addInnerReport(KappaReport.class);
+        batch.addReport(BatchTrainTestReport.class);
+        batch.addReport(BatchOutcomeIDReport.class);
+        batch.addReport(BatchRuntimeReport.class);
+
+        // Run
+        Lab.getInstance().run(batch);
+    }
 }

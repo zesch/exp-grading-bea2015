@@ -7,18 +7,10 @@ import java.util.List;
 import java.util.Map;
 
 import weka.clusterers.SimpleKMeans;
-import de.tudarmstadt.ukp.dkpro.lab.Lab;
 import de.tudarmstadt.ukp.dkpro.lab.task.Dimension;
 import de.tudarmstadt.ukp.dkpro.lab.task.ParameterSpace;
-import de.tudarmstadt.ukp.dkpro.lab.task.impl.BatchTask.ExecutionPolicy;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchOutcomeIDReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchRuntimeReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchTrainTestReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
 import de.unidue.langtech.grading.io.PowerGradingReader;
-import de.unidue.langtech.grading.report.KappaReport;
-import de.unidue.langtech.grading.tc.BatchTaskClusterClassification;
-import de.unidue.langtech.grading.tc.BatchTaskClustering;
 
 public class PowergradingClustering
     extends ExperimentsBase
@@ -35,8 +27,8 @@ public class PowergradingClustering
 	        ParameterSpace pSpace = getParameterSpace(questionId, TRAIN_DATA_ALL, TEST_DATA_ALL);
 
 	        PowergradingClustering experiment = new PowergradingClustering();
-//	        experiment.runClustering(pSpace);
-	        experiment.runClusterClassification(pSpace);
+//	        experiment.runClustering(pSpace, "PG");
+	        experiment.runClusterClassification(pSpace, "PG");
         }
     }
     
@@ -77,38 +69,5 @@ public class PowergradingClustering
         );
 
         return pSpace;
-    }
-
-    // ##### CLUSTERING #####
-    protected void runClustering(ParameterSpace pSpace)
-        throws Exception
-    {
-        BatchTaskClustering batch = new BatchTaskClustering("Powergrading-Clustering",
-                getPreprocessing());    
-        batch.setParameterSpace(pSpace);
-        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
-        batch.addReport(BatchTrainTestReport.class);
-        batch.addReport(BatchOutcomeIDReport.class);
-        batch.addReport(BatchRuntimeReport.class);
-
-        // Run
-        Lab.getInstance().run(batch);
-    }
-    
-    // ##### CLUSTERING + CLASSIFICATION #####
-    protected void runClusterClassification(ParameterSpace pSpace)
-        throws Exception
-    {
-        BatchTaskClusterClassification batch = new BatchTaskClusterClassification("Powergrading-ClusterClassification",
-                getPreprocessing());    
-        batch.setParameterSpace(pSpace);
-        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
-        batch.addInnerReport(KappaReport.class);
-        batch.addReport(BatchTrainTestReport.class);
-        batch.addReport(BatchOutcomeIDReport.class);
-        batch.addReport(BatchRuntimeReport.class);
-
-        // Run
-        Lab.getInstance().run(batch);
     }
 }

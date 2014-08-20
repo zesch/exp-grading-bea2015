@@ -36,9 +36,9 @@ public class PowergradingBaseline
 	        ParameterSpace pSpace = getParameterSpace(questionId, TRAIN_DATA_ALL, TEST_DATA_ALL);
 
 	        PowergradingBaseline experiment = new PowergradingBaseline();
-//	        experiment.runCrossValidation(pSpace);
-//	        experiment.runTrainTest(pSpace);
-	        experiment.runLearningCurve(pSpace);
+//	        experiment.runCrossValidation(pSpace, "PG");
+//	        experiment.runTrainTest(pSpace, "PG");
+	        experiment.runLearningCurve(pSpace, "PG");
         }
     }
     
@@ -74,62 +74,4 @@ public class PowergradingBaseline
 
         return pSpace;
     }
-
-    // ##### CV #####
-    protected void runCrossValidation(ParameterSpace pSpace)
-        throws Exception
-    {
-        BatchTaskCrossValidation batch = new BatchTaskCrossValidation("Powergrading-CV",
-                getPreprocessing(), NUM_FOLDS);
-        // adds a report to TestTask which creates a report about average feature values for
-        // each outcome label
-        batch.addInnerReport(FeatureValuesReport.class);
-        // computes and stores the kappa values
-        batch.addInnerReport(KappaReport.class);
-        batch.setParameterSpace(pSpace);
-        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
-        batch.addReport(BatchCrossValidationReport.class);
-        batch.addReport(BatchRuntimeReport.class);
-
-        // Run
-        Lab.getInstance().run(batch);
-    }
-
-    // ##### TRAIN-TEST #####
-    protected void runTrainTest(ParameterSpace pSpace)
-        throws Exception
-    {
-        BatchTaskTrainTest batch = new BatchTaskTrainTest("Powergrading-TrainTest",
-                getPreprocessing());
-        // adds a report to TestTask which creates a report about average feature values for
-        // each outcome label
-        batch.addInnerReport(FeatureValuesReport.class);
-        // computes and stores the kappa values
-        batch.addInnerReport(KappaReport.class);    
-        batch.setParameterSpace(pSpace);
-        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
-        batch.addReport(BatchTrainTestReport.class);
-        batch.addReport(BatchOutcomeIDReport.class);
-        batch.addReport(BatchRuntimeReport.class);
-
-        // Run
-        Lab.getInstance().run(batch);
-    }
-    
-    // ##### LEARNING-CURVE #####
-    protected void runLearningCurve(ParameterSpace pSpace)
-        throws Exception
-    {
-        BatchTaskLearningCurve batch = new BatchTaskLearningCurve("Powergrading-LearningCurve",
-                getPreprocessing());
-        // computes and stores the kappa values
-        batch.addInnerReport(LearningCurveReport.class);    
-        batch.setParameterSpace(pSpace);
-        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
-        batch.addReport(BatchRuntimeReport.class);
-
-        // Run
-        Lab.getInstance().run(batch);
-    }
-
 }

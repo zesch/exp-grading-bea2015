@@ -7,18 +7,10 @@ import java.util.List;
 import java.util.Map;
 
 import weka.clusterers.SimpleKMeans;
-import de.tudarmstadt.ukp.dkpro.lab.Lab;
 import de.tudarmstadt.ukp.dkpro.lab.task.Dimension;
 import de.tudarmstadt.ukp.dkpro.lab.task.ParameterSpace;
-import de.tudarmstadt.ukp.dkpro.lab.task.impl.BatchTask.ExecutionPolicy;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchOutcomeIDReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchRuntimeReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchTrainTestReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
 import de.unidue.langtech.grading.io.Asap2Reader;
-import de.unidue.langtech.grading.report.KappaReport;
-import de.unidue.langtech.grading.tc.BatchTaskClusterClassification;
-import de.unidue.langtech.grading.tc.BatchTaskClustering;
 
 public class AsapClustering
     extends ExperimentsBase
@@ -34,8 +26,8 @@ public class AsapClustering
 	        ParameterSpace pSpace = getParameterSpace(essaySetId, TRAIN_DATA_ALL, TEST_DATA);
 
 	        AsapClustering experiment = new AsapClustering();
-//	        experiment.runClustering(pSpace);
-	        experiment.runClusterClassification(pSpace);
+//	        experiment.runClustering(pSpace, "ASAP");
+	        experiment.runClusterClassification(pSpace, "ASAP");
 
         }
     }
@@ -77,38 +69,5 @@ public class AsapClustering
         );
 
         return pSpace;
-    }
-
-    // ##### CLUSTERING #####
-    protected void runClustering(ParameterSpace pSpace)
-        throws Exception
-    {
-        BatchTaskClustering batch = new BatchTaskClustering("ASAP-Clustering",
-                getPreprocessing());    
-        batch.setParameterSpace(pSpace);
-        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
-        batch.addReport(BatchTrainTestReport.class);
-        batch.addReport(BatchOutcomeIDReport.class);
-        batch.addReport(BatchRuntimeReport.class);
-
-        // Run
-        Lab.getInstance().run(batch);
-    }
-    
-    // ##### CLUSTERING + CLASSIFICATION #####
-    protected void runClusterClassification(ParameterSpace pSpace)
-        throws Exception
-    {
-        BatchTaskClusterClassification batch = new BatchTaskClusterClassification("ASAP-ClusterClassification",
-                getPreprocessing());    
-        batch.setParameterSpace(pSpace);
-        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
-        batch.addInnerReport(KappaReport.class);
-        batch.addReport(BatchTrainTestReport.class);
-        batch.addReport(BatchOutcomeIDReport.class);
-        batch.addReport(BatchRuntimeReport.class);
-
-        // Run
-        Lab.getInstance().run(batch);
     }
 }
