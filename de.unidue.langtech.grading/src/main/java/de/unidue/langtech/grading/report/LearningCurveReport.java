@@ -18,28 +18,15 @@
  */
 package de.unidue.langtech.grading.report;
 
-import static de.tudarmstadt.ukp.dkpro.tc.core.util.ReportConstants.CORRECT;
-import static de.tudarmstadt.ukp.dkpro.tc.core.util.ReportConstants.FMEASURE;
-import static de.tudarmstadt.ukp.dkpro.tc.core.util.ReportConstants.INCORRECT;
-import static de.tudarmstadt.ukp.dkpro.tc.core.util.ReportConstants.PCT_CORRECT;
-import static de.tudarmstadt.ukp.dkpro.tc.core.util.ReportConstants.PCT_INCORRECT;
-import static de.tudarmstadt.ukp.dkpro.tc.core.util.ReportConstants.PCT_UNCLASSIFIED;
-import static de.tudarmstadt.ukp.dkpro.tc.core.util.ReportConstants.PRECISION;
-import static de.tudarmstadt.ukp.dkpro.tc.core.util.ReportConstants.RECALL;
-import static de.tudarmstadt.ukp.dkpro.tc.core.util.ReportConstants.WGT_FMEASURE;
-import static de.tudarmstadt.ukp.dkpro.tc.core.util.ReportConstants.WGT_PRECISION;
-import static de.tudarmstadt.ukp.dkpro.tc.core.util.ReportConstants.WGT_RECALL;
-
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
 import weka.core.SerializationHelper;
-import de.tudarmstadt.ukp.dkpro.lab.reporting.FlexTable;
 import de.tudarmstadt.ukp.dkpro.lab.reporting.ReportBase;
 import de.tudarmstadt.ukp.dkpro.lab.storage.StorageService.AccessMode;
 import de.tudarmstadt.ukp.dkpro.lab.storage.impl.PropertiesAdapter;
@@ -73,52 +60,64 @@ public class LearningCurveReport
     {
         File storage = getContext().getStorageLocation(TestTask.TEST_TASK_OUTPUT_KEY, AccessMode.READONLY);
 
-        for (Integer trainPercent : LearningCurveTask.TRAIN_PERCENTAGES) {
+        for (Integer numberOfInstances : LearningCurveTask.NUMBER_OF_TRAINING_INSTANCES) {
 	        Properties props = new Properties();
-	
-	        File evaluationFile = new File(storage.getAbsolutePath() + "/"
-	                + TestTask.EVALUATION_DATA_FILENAME + "_" + trainPercent);
-	        
-	        // this might happen as we skip some percentages if the number of training instances is too low
-	        if (!evaluationFile.exists()) {
-	        	continue;
-	        }
-	
-	        weka.classifiers.Evaluation eval = (weka.classifiers.Evaluation) SerializationHelper
-	                .read(evaluationFile.getAbsolutePath());
-	        
-//	        System.out.println(eval.toMatrixString());
-	        
-	        List<String> classLabels = TaskUtils.getClassLabels(eval.getHeader(), false);
-	        List<Integer> classLabelsInteger = new ArrayList<Integer>();
-	        for (String classLabel : classLabels) {
-	            classLabelsInteger.add(Integer.parseInt(classLabel));
-	        }
-	        
-	        double[][] confusionMatrix = eval.confusionMatrix();
-	
-	        List<Integer> goldLabelsList = new ArrayList<Integer>();
-	        List<Integer> predictedLabelsList = new ArrayList<Integer>();
-	        
-	        // fill rating lists from weka confusion matrix
-	        for (int c = 0; c < confusionMatrix.length; c++) {
-	            for (int r = 0; r < confusionMatrix.length; r++) {
-	                for (int i=0; i < (int) confusionMatrix[c][r]; i++) {
-	                    goldLabelsList.add(classLabelsInteger.get(c));
-	                    predictedLabelsList.add(classLabelsInteger.get(r));
-	                }
-	            }
-	        }
-	        
-	        results.put(KappaReport.KAPPA, QuadraticWeightedKappa.getKappa(goldLabelsList, predictedLabelsList, classLabelsInteger.toArray(new Integer[0])));
-	
+	        List<Double> kappas = new ArrayList<Double>();
+        	for (int iteration=0; iteration<LearningCurveTask.ITERATIONS; iteration++) {
+		        File evaluationFile = new File(storage.getAbsolutePath() + "/"
+		                + TestTask.EVALUATION_DATA_FILENAME + "_" + numberOfInstances + "_" + iteration);
+		        
+		        // we need to check non-existing files as we might skip some training sizes
+		        if (!evaluationFile.exists()) {
+		        	continue;
+		        }
+    	
+    	        weka.classifiers.Evaluation eval = (weka.classifiers.Evaluation) SerializationHelper
+    	                .read(evaluationFile.getAbsolutePath());
+    	        
+//    	        System.out.println(eval.toMatrixString());
+    	        
+    	        List<String> classLabels = TaskUtils.getClassLabels(eval.getHeader(), false);
+    	        List<Integer> classLabelsInteger = new ArrayList<Integer>();
+    	        for (String classLabel : classLabels) {
+    	            classLabelsInteger.add(Integer.parseInt(classLabel));
+    	        }
+    	        
+    	        double[][] confusionMatrix = eval.confusionMatrix();
+    	
+    	        List<Integer> goldLabelsList = new ArrayList<Integer>();
+    	        List<Integer> predictedLabelsList = new ArrayList<Integer>();
+    	        
+    	        // fill rating lists from weka confusion matrix
+    	        for (int c = 0; c < confusionMatrix.length; c++) {
+    	            for (int r = 0; r < confusionMatrix.length; r++) {
+    	                for (int i=0; i < (int) confusionMatrix[c][r]; i++) {
+    	                    goldLabelsList.add(classLabelsInteger.get(c));
+    	                    predictedLabelsList.add(classLabelsInteger.get(r));
+    	                }
+    	            }
+    	        }
+    	        
+    	        double kappa = QuadraticWeightedKappa.getKappa(goldLabelsList, predictedLabelsList, classLabelsInteger.toArray(new Integer[0]));
+    	        kappas.add(kappa);
+        	}
+
+        	double min = -1.0;
+        	double max = -1.0;
+        	if (kappas.size() > 0) {
+        		min = Collections.min(kappas);
+        		max = Collections.max(kappas);
+        	}
+	        double meanKappa = QuadraticWeightedKappa.getMeanKappa(kappas);
+	        results.put(KappaReport.KAPPA, meanKappa);
+	        System.out.println(numberOfInstances + "\t" + meanKappa + "\t" + min + "\t" + max);
+	    	
 	        for (String s : results.keySet()) {
-	            System.out.println(trainPercent + "\t" + results.get(s));
 	            props.setProperty(s, results.get(s).toString());
 	        }
 	        
 	        // Write out properties
-	        getContext().storeBinary(TestTask.RESULTS_FILENAME + "_" + trainPercent, new PropertiesAdapter(props));
+	        getContext().storeBinary(TestTask.RESULTS_FILENAME + "_" + numberOfInstances, new PropertiesAdapter(props));
         }
     }
 }

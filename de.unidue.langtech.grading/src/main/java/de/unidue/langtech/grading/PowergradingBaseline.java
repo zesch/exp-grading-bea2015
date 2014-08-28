@@ -5,22 +5,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import de.tudarmstadt.ukp.dkpro.lab.Lab;
 import de.tudarmstadt.ukp.dkpro.lab.task.Dimension;
 import de.tudarmstadt.ukp.dkpro.lab.task.ParameterSpace;
-import de.tudarmstadt.ukp.dkpro.lab.task.impl.BatchTask.ExecutionPolicy;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchCrossValidationReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchOutcomeIDReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchRuntimeReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.BatchTrainTestReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.FeatureValuesReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskCrossValidation;
-import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskTrainTest;
 import de.tudarmstadt.ukp.dkpro.tc.weka.writer.WekaDataWriter;
 import de.unidue.langtech.grading.io.PowerGradingReader;
-import de.unidue.langtech.grading.report.KappaReport;
-import de.unidue.langtech.grading.report.LearningCurveReport;
-import de.unidue.langtech.grading.tc.BatchTaskLearningCurve;
 
 public class PowergradingBaseline
     extends ExperimentsBase

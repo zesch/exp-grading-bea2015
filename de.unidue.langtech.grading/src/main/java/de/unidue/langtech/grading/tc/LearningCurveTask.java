@@ -20,11 +20,11 @@ package de.unidue.langtech.grading.tc;
 
 import java.io.File;
 import java.util.List;
+import java.util.Random;
 
 import weka.classifiers.AbstractClassifier;
 import weka.classifiers.Classifier;
 import weka.core.Instances;
-import weka.core.converters.ConverterUtils.DataSink;
 import de.tudarmstadt.ukp.dkpro.lab.engine.TaskContext;
 import de.tudarmstadt.ukp.dkpro.lab.storage.StorageService.AccessMode;
 import de.tudarmstadt.ukp.dkpro.lab.task.Discriminator;
@@ -42,7 +42,9 @@ public class LearningCurveTask
     extends ExecutableTaskBase
     implements Constants
 {
-	public static Integer[] TRAIN_PERCENTAGES = new Integer[] {1,5,10,20,30,40,50,60,70,80,90,100};
+	public static Integer[] NUMBER_OF_TRAINING_INSTANCES = new Integer[] {16,32,64,128,256,512,1024};
+
+	public static Integer ITERATIONS = 25;
 
     @Discriminator
     private List<String> classificationArguments;   
@@ -58,55 +60,59 @@ public class LearningCurveTask
         boolean multiLabel = false;
 
         
-        for (Integer trainPercent : TRAIN_PERCENTAGES) {
-            File arffFileTrain = new File(aContext.getStorageLocation(
-                    TEST_TASK_INPUT_KEY_TRAINING_DATA,
-                    AccessMode.READONLY).getPath()
-                    + "/" + TRAINING_DATA_FILENAME);
-            File arffFileTest = new File(aContext.getStorageLocation(TEST_TASK_INPUT_KEY_TEST_DATA,
-                    AccessMode.READONLY).getPath()
-                    + "/" + TRAINING_DATA_FILENAME);
-            
-            Instances trainData = TaskUtils.getInstances(arffFileTrain, multiLabel);
-            Instances testData = TaskUtils.getInstances(arffFileTest, multiLabel);
+        for (Integer numberInstances : NUMBER_OF_TRAINING_INSTANCES) {
+        	for (int iteration=0; iteration<ITERATIONS; iteration++) {
+                File arffFileTrain = new File(aContext.getStorageLocation(
+                        TEST_TASK_INPUT_KEY_TRAINING_DATA,
+                        AccessMode.READONLY).getPath()
+                        + "/" + TRAINING_DATA_FILENAME);
+                File arffFileTest = new File(aContext.getStorageLocation(TEST_TASK_INPUT_KEY_TEST_DATA,
+                        AccessMode.READONLY).getPath()
+                        + "/" + TRAINING_DATA_FILENAME);
+                
+                Instances trainData = TaskUtils.getInstances(arffFileTrain, multiLabel);
+                Instances testData = TaskUtils.getInstances(arffFileTest, multiLabel);
+                
+                if (numberInstances > trainData.size()) {
+                	continue;
+                }
 
-            Classifier cl = AbstractClassifier.forName(classificationArguments.get(0), classificationArguments
-                        .subList(1, classificationArguments.size()).toArray(new String[0]));
+                Classifier cl = AbstractClassifier.forName(classificationArguments.get(0), classificationArguments
+                            .subList(1, classificationArguments.size()).toArray(new String[0]));
 
-            Instances copyTestData = new Instances(testData);
-            trainData = WekaUtils.removeOutcomeId(trainData, multiLabel);
-            testData = WekaUtils.removeOutcomeId(testData, multiLabel);
-            
-            // remove fraction of training data that should not be used for training
-            double ratio = (double) trainPercent / 100;
-            int cutoff = new Double(Math.floor(trainData.size() * ratio)).intValue();
-            if (cutoff < 10) {
-            	System.out.println("skipping - too few training instances.");
-            	continue;
-            }
-            
-            for (int i = trainData.size() - 1; i >= cutoff; i--) {
-            	trainData.delete(i);
-            }
+                Instances copyTestData = new Instances(testData);
+                trainData = WekaUtils.removeOutcomeId(trainData, multiLabel);
+                testData = WekaUtils.removeOutcomeId(testData, multiLabel);
+                
+                Random generator = new Random();
+                generator.setSeed(System.nanoTime());
+                
+                trainData.randomize(generator);
+                
+                // remove fraction of training data that should not be used for training
+                for (int i = trainData.size() - 1; i >= numberInstances; i--) {
+                	trainData.delete(i);
+                }
 
-            // file to hold prediction results
-            File evalOutput = new File(aContext.getStorageLocation(TEST_TASK_OUTPUT_KEY,
-                    AccessMode.READWRITE)
-                    .getPath()
-                    + "/" + EVALUATION_DATA_FILENAME + "_" + trainPercent);
+                // file to hold prediction results
+                File evalOutput = new File(aContext.getStorageLocation(TEST_TASK_OUTPUT_KEY,
+                        AccessMode.READWRITE)
+                        .getPath()
+                        + "/" + EVALUATION_DATA_FILENAME + "_" + numberInstances + "_" + iteration);
 
-            // train the classifier on the train set split - not necessary in multilabel setup, but
-            // in single label setup
-            cl.buildClassifier(trainData);
-            
-            weka.core.SerializationHelper.write(evalOutput.getAbsolutePath(),
-                    WekaUtils.getEvaluationSinglelabel(cl, trainData, testData));
-            testData = WekaUtils.getPredictionInstancesSingleLabel(testData, cl);
-            testData = WekaUtils.addOutcomeId(testData, copyTestData, false);
+                // train the classifier on the train set split - not necessary in multilabel setup, but
+                // in single label setup
+                cl.buildClassifier(trainData);
+                
+                weka.core.SerializationHelper.write(evalOutput.getAbsolutePath(),
+                        WekaUtils.getEvaluationSinglelabel(cl, trainData, testData));
+                testData = WekaUtils.getPredictionInstancesSingleLabel(testData, cl);
+                testData = WekaUtils.addOutcomeId(testData, copyTestData, false);
 
-//            // Write out the predictions
-//            DataSink.write(aContext.getStorageLocation(TEST_TASK_OUTPUT_KEY, AccessMode.READWRITE)
-//                    .getAbsolutePath() + "/" + PREDICTIONS_FILENAME + "_" + trainPercent, testData);        	
+//                // Write out the predictions
+//                DataSink.write(aContext.getStorageLocation(TEST_TASK_OUTPUT_KEY, AccessMode.READWRITE)
+//                        .getAbsolutePath() + "/" + PREDICTIONS_FILENAME + "_" + trainPercent, testData); 
+        	} 	
         }
     }
 }
