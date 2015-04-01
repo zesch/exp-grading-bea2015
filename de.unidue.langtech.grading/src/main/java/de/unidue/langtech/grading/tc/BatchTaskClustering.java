@@ -30,8 +30,6 @@ import de.tudarmstadt.ukp.dkpro.tc.core.task.ExtractFeaturesTask;
 import de.tudarmstadt.ukp.dkpro.tc.core.task.MetaInfoTask;
 import de.tudarmstadt.ukp.dkpro.tc.core.task.PreprocessTask;
 import de.tudarmstadt.ukp.dkpro.tc.core.task.ValidityCheckTask;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.ClassificationReport;
-import de.tudarmstadt.ukp.dkpro.tc.weka.report.OutcomeIDReport;
 import de.tudarmstadt.ukp.dkpro.tc.weka.task.TestTask;
 
 /**

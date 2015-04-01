@@ -33,7 +33,9 @@ public class PowerGradingReader
     extends JCasCollectionReader_ImplBase
 {
     
-	public static final Integer[] questionIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 13, 20 };
+//	public static final Integer[] questionIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 13, 20 };
+	// excluding 13
+	public static final Integer[] questionIds = new Integer[] { 1, 2, 3, 4, 5, 6, 7, 8, 20 };
 
     protected static final String DEFAULT_LANGUAGE = "en";
     

@@ -128,15 +128,16 @@ public class ClusterTrainTask
         
         double avgPurity = 0.0;
         int n = 0;
-        for (Integer clusterId : sortedClusters.keySet()) { 	
+        for (Integer clusterId : sortedClusters.keySet()) { 
+        	// we need to take as many clusters until we have seen at least each class once
         	if (onlyPureClusters && trainOutcomeValues.size() == 0) {
         		break;
         	}
         	
-        	// do not use clusters of single responses, as they always have purity of 1
-        	if (clusterCfd.getFrequencyDistribution(clusterId).getN() == 1) {
-        		continue;
-        	}
+//        	// do not use clusters of single responses, as they always have purity of 1
+//        	if (clusterCfd.getFrequencyDistribution(clusterId).getN() == 1) {
+//        		continue;
+//        	}
         	
         	n++;
         	avgPurity += clusterScoreMap.get(clusterId);

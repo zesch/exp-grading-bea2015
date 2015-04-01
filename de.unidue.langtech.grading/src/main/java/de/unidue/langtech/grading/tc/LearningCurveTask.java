@@ -42,9 +42,9 @@ public class LearningCurveTask
     extends ExecutableTaskBase
     implements Constants
 {
-	public static Integer[] NUMBER_OF_TRAINING_INSTANCES = new Integer[] {16,32,64,128,256,512,1024};
+	public static Integer[] NUMBER_OF_TRAINING_INSTANCES = new Integer[] {8,16,32,64,128,256,512,1024};
 
-	public static Integer ITERATIONS = 25;
+	public static Integer ITERATIONS = 500;
 
     @Discriminator
     private List<String> classificationArguments;   

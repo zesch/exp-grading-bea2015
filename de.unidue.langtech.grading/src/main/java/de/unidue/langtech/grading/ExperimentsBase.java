@@ -40,6 +40,7 @@ import de.tudarmstadt.ukp.dkpro.tc.weka.task.BatchTaskTrainTest;
 import de.unidue.langtech.grading.report.KappaReport;
 import de.unidue.langtech.grading.report.LearningCurveReport;
 import de.unidue.langtech.grading.tc.BatchTaskClusterClassification;
+import de.unidue.langtech.grading.tc.BatchTaskClusterClassificationExemplar;
 import de.unidue.langtech.grading.tc.BatchTaskClustering;
 import de.unidue.langtech.grading.tc.BatchTaskLearningCurve;
 
@@ -52,13 +53,15 @@ public abstract class ExperimentsBase
     public static final Boolean[] toLowerCase = new Boolean[] { true };
     
     public static final Boolean[] onlyPure = new Boolean[] { false, true};
-          
+
     public static final String stopwordList = "classpath:/stopwords/english_stopwords.txt";
 //    public static final String stopwordList = "classpath:/stopwords/english_empty.txt";
     
     public static final String SPELLING_VOCABULARY = "classpath:/vocabulary/en_US_dict.txt";
 
     public static final int NUM_FOLDS = 5;
+    
+    public static final int NR_OF_CLUSTERS = 32;
     
     public static final boolean useTagger = true;
     public static final boolean useParsing = true;
@@ -236,7 +239,6 @@ public abstract class ExperimentsBase
         Lab.getInstance().run(batch);
     }
     
-
     // ##### CLUSTERING #####
     protected void runClustering(ParameterSpace pSpace, String name)
         throws Exception
@@ -258,6 +260,23 @@ public abstract class ExperimentsBase
         throws Exception
     {
         BatchTaskClusterClassification batch = new BatchTaskClusterClassification(name + "-ClusterClassification",
+                getPreprocessing());    
+        batch.setParameterSpace(pSpace);
+        batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);
+        batch.addInnerReport(KappaReport.class);
+        batch.addReport(BatchTrainTestReport.class);
+        batch.addReport(BatchOutcomeIDReport.class);
+        batch.addReport(BatchRuntimeReport.class);
+
+        // Run
+        Lab.getInstance().run(batch);
+    }
+    
+    // ##### CLUSTERING + CLASSIFICATION WITH CENTROIDS #####
+    protected void runClusterClassificationCentroids(ParameterSpace pSpace, String name)
+        throws Exception
+    {
+        BatchTaskClusterClassificationExemplar batch = new BatchTaskClusterClassificationExemplar(name + "-ClusterClassification",
                 getPreprocessing());    
         batch.setParameterSpace(pSpace);
         batch.setExecutionPolicy(ExecutionPolicy.RUN_AGAIN);

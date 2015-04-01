@@ -16,13 +16,10 @@ import org.apache.uima.fit.factory.CollectionReaderFactory;
 import org.apache.uima.fit.pipeline.SimplePipeline;
 import org.apache.uima.resource.ResourceInitializationException;
 
-import de.tudarmstadt.ukp.dkpro.core.api.resources.DkproContext;
 import de.tudarmstadt.ukp.dkpro.core.clearnlp.ClearNlpSegmenter;
 import de.tudarmstadt.ukp.dkpro.tc.core.Constants;
 import de.unidue.langtech.grading.io.Asap2Reader;
-import de.unidue.langtech.grading.io.CbalReader;
 import de.unidue.langtech.grading.io.PowerGradingReader;
-import de.unidue.langtech.grading.io.RfuReader;
 import de.unidue.langtech.grading.util.DatasetStatisticsCollector;
 
 public class DatasetStatistics
@@ -48,17 +45,9 @@ public class DatasetStatistics
         runAsapProcessing();
         getStatistics("ASAP");
         
-    	System.out.println("CBAL");
-        runCbalProcessing();
-        getStatistics("CBAL");
-        
     	System.out.println("Powergrading");
         runPowergradingProcessing();
         getStatistics("PG");
-        
-    	System.out.println("RfU");
-        runRfuProcessing();
-        getStatistics("RFU");
     }
     
     private static void getStatistics(String dataset)
@@ -128,27 +117,6 @@ public class DatasetStatistics
         }
     }
     
-    private static void runCbalProcessing()
-    		throws ResourceInitializationException, UIMAException, IOException
-    {
-        File baseDir = new File(new DkproContext().getWorkspace("ETS").getAbsolutePath() + "/CBAL");
-
-        for (String question : CbalReader.cbalQuestions) {
-        	SimplePipeline.runPipeline(
-        			CollectionReaderFactory.createReader(
-	        			CbalReader.class,
-	            		CbalReader.PARAM_INPUT_FILE, baseDir.getAbsolutePath() + "/" + question + ".train.csv"
-        			),
-		            createEngineDescription(
-		                createEngineDescription(ClearNlpSegmenter.class),
-		                createEngineDescription(
-		                		DatasetStatisticsCollector.class,
-		                		DatasetStatisticsCollector.PARAM_DATASET_NAME, "CBAL")
-		            )
-
-            );
-        }
-    }
     
     private static void runPowergradingProcessing()
     		throws ResourceInitializationException, UIMAException, IOException
@@ -165,28 +133,6 @@ public class DatasetStatistics
 		                createEngineDescription(
 		                		DatasetStatisticsCollector.class,
 		                		DatasetStatisticsCollector.PARAM_DATASET_NAME, "PG")
-		            )
-
-            );
-        }
-    }
-    
-    private static void runRfuProcessing()
-    		throws ResourceInitializationException, UIMAException, IOException
-    {
-        File baseDir = new File(new DkproContext().getWorkspace("ETS").getAbsolutePath() + "/RFU");
-
-        for (String question : RfuReader.rfuQuestions) {
-        	SimplePipeline.runPipeline(
-        			CollectionReaderFactory.createReader(
-	        			RfuReader.class,
-	            		RfuReader.PARAM_INPUT_FILE, baseDir.getAbsolutePath() + "/" + question + "_train.txt"
-        			),
-		            createEngineDescription(
-		                createEngineDescription(ClearNlpSegmenter.class),
-		                createEngineDescription(
-		                		DatasetStatisticsCollector.class,
-		                		DatasetStatisticsCollector.PARAM_DATASET_NAME, "RFU")
 		            )
 
             );

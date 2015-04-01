@@ -28,7 +28,8 @@ public class PowergradingClustering
 
 	        PowergradingClustering experiment = new PowergradingClustering();
 //	        experiment.runClustering(pSpace, "PG");
-	        experiment.runClusterClassification(pSpace, "PG");
+//            experiment.runClusterClassification(pSpace, "PG");
+	        experiment.runClusterClassificationCentroids(pSpace, "PG");
         }
     }
     
@@ -53,7 +54,7 @@ public class PowergradingClustering
                 		PowerGradingReader.PARAM_QUESTION_ID, questionId));
 
         Dimension<List<String>> dimClusteringArgs = Dimension.create("clusteringArguments",
-                Arrays.asList(new String[] { SimpleKMeans.class.getName(), "-N", "10", })
+                Arrays.asList(new String[] { SimpleKMeans.class.getName(), "-N", Integer.toString(NR_OF_CLUSTERS), })
         );  
  
         ParameterSpace pSpace = new ParameterSpace(Dimension.createBundle("readers", dimReaders),

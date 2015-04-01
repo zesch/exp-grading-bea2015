@@ -172,7 +172,6 @@ public class BatchTaskClusterClassification
         testTask.addImport(featuresTestTask, ExtractFeaturesTask.OUTPUT_KEY,
                 TestTask.TEST_TASK_INPUT_KEY_TEST_DATA);
         
-        // DKPro Lab issue 38: must be added as *first* task
         addTask(checkTask);
         addTask(preprocessTaskTrain);
         addTask(preprocessTaskTest);

@@ -22,12 +22,14 @@ public class AsapClustering
     public static void main(String[] args)
         throws Exception
     {
+    	
         for (int essaySetId : Asap2Reader.essaySetIds) {
 	        ParameterSpace pSpace = getParameterSpace(essaySetId, TRAIN_DATA_ALL, TEST_DATA);
 
 	        AsapClustering experiment = new AsapClustering();
 //	        experiment.runClustering(pSpace, "ASAP");
-	        experiment.runClusterClassification(pSpace, "ASAP");
+//	        experiment.runClusterClassification(pSpace, "ASAP");
+	        experiment.runClusterClassificationCentroids(pSpace, "ASAP");
 
         }
     }
@@ -53,7 +55,7 @@ public class AsapClustering
                         Asap2Reader.PARAM_ESSAY_SET_ID, essaySetId));
 
         Dimension<List<String>> dimClusteringArgs = Dimension.create("clusteringArguments",
-                Arrays.asList(new String[] { SimpleKMeans.class.getName(), "-N", "50", })
+                Arrays.asList(new String[] { SimpleKMeans.class.getName(), "-N", Integer.toString(NR_OF_CLUSTERS), })
         );  
     
         ParameterSpace pSpace = new ParameterSpace(Dimension.createBundle("readers", dimReaders),
